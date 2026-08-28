@@ -25,9 +25,9 @@ install:
 prepare:
 	bash scripts/prepare-electron.sh
 
-# 开发模式
+# 开发模式（用包装脚本确保 Ctrl+C 正确清理）
 dev:
-	npm run dev
+	bash scripts/dev.sh
 
 # 构建
 build:
