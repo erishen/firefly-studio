@@ -1,18 +1,41 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useRef, useState, useCallback } from 'react'
+import { Canvas } from '@react-three/fiber'
+import { OrbitControls } from '@react-three/drei'
+import Stage from './components/Stage'
 
-// 判断渲染进程是否能访问 preload 暴露的 API
 const hasNative = typeof window !== 'undefined' && !!window.electronAPI
 
+const MODELS = [
+  { key: 'firefly', label: '萤火女仆 (VRM)' },
+  { key: 'vrm', label: 'VRoid (VRM)' },
+  { key: 'avaturn', label: 'Avaturn (GLB)' },
+  { key: 'rpm', label: 'RPM (GLB)' },
+]
+
 export default function App() {
-  const [nativeLoaded, setNativeLoaded] = useState(hasNative)
+  const [nativeLoaded] = useState(hasNative)
   const [testResult, setTestResult] = useState(null)
   const [audioHandle, setAudioHandle] = useState(null)
   const [asrHandle, setAsrHandle] = useState(null)
   const [threshold, setThreshold] = useState(0.05)
   const [log, setLog] = useState([])
+  const [modelSource, setModelSource] = useState('firefly')
+  const [panelOpen, setPanelOpen] = useState(true)
+  const speakingRef = useRef(false)
+  const [bubble, setBubble] = useState({ text: '', visible: false, who: 'ai' })
 
   const pushLog = useCallback((msg) => {
     setLog((prev) => [...prev.slice(-50), `${new Date().toLocaleTimeString()}  ${msg}`])
+  }, [])
+
+  // 点击数字人：触发说话动画 + 气泡
+  const handleAvatarClick = useCallback(() => {
+    speakingRef.current = true
+    setBubble({ text: '你好！我是 Firefly，点击右侧按钮可以测试 C++ 原生模块。', visible: true, who: 'ai' })
+    setTimeout(() => {
+      speakingRef.current = false
+      setBubble({ text: '', visible: false, who: 'ai' })
+    }, 3000)
   }, [])
 
   // 原生自检
@@ -30,18 +53,13 @@ export default function App() {
     }
   }, [pushLog])
 
-  // 音频引擎：创建 + 喂一段合成 PCM + 计算能量
+  // 音频引擎测试
   const runAudioTest = useCallback(async () => {
-    if (!window.electronAPI) {
-      pushLog('❌ 无 electronAPI')
-      return
-    }
+    if (!window.electronAPI) return
     try {
       const handle = await window.electronAPI.audio.create(16000)
       setAudioHandle(handle)
       pushLog(`✅ 创建 AudioEngine handle=${handle}`)
-
-      // 合成 100ms 的 PCM：一半静音，一半有声音，观察 RMS 差异
       const silent = new Int16Array(800)
       const loud = new Int16Array(800).fill(8000)
       const rmsSilent = await window.electronAPI.audio.feedRms(handle, silent.buffer)
@@ -54,28 +72,22 @@ export default function App() {
     }
   }, [pushLog])
 
-  // 调阈值
   const applyThreshold = useCallback(async () => {
     if (!audioHandle || !window.electronAPI) return
     await window.electronAPI.audio.setThreshold(audioHandle, threshold)
     pushLog(`🎚️ 已设置 speech threshold=${threshold}`)
   }, [audioHandle, threshold, pushLog])
 
-  // ASR 客户端：模拟喂入 PCM，观察流式"识别"
+  // ASR 测试
   const runAsrTest = useCallback(async () => {
-    if (!window.electronAPI) {
-      pushLog('❌ 无 electronAPI')
-      return
-    }
+    if (!window.electronAPI) return
     try {
       const handle = await window.electronAPI.asr.create('wss://example.com/asr', 'demo-token')
       setAsrHandle(handle)
       await window.electronAPI.asr.start(handle, 16000)
       pushLog('🎤 ASR 客户端已启动（占位实现）')
-
-      // 喂 3 秒 PCM（每 100ms 一帧）
       const frame = new Int16Array(1600).fill(4000)
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 10; i++) {
         const text = await window.electronAPI.asr.feed(handle, frame.buffer)
         if (text) pushLog(`📝 流式: ${text}`)
       }
@@ -88,62 +100,104 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <h1>Firefly Studio <span className="badge">骨架 v0.1</span></h1>
-        <p>Electron + React + three.js + C++ 原生模块（node-addon-api，可调试）</p>
-      </header>
+      {/* 3D 数字人主视图 */}
+      <div className="avatar-canvas">
+        <Canvas
+          camera={{ position: [0, 1.5, 4.5], fov: 40 }}
+          shadows
+          gl={{ antialias: true, alpha: true }}
+        >
+          <Stage
+            speakingRef={speakingRef}
+            bubble={bubble}
+            onClick={handleAvatarClick}
+            modelSource={modelSource}
+          />
+          <OrbitControls
+            enablePan={false}
+            minDistance={2.5}
+            maxDistance={8}
+            target={[0, 1.2, 0]}
+          />
+        </Canvas>
 
-      <div className="status-bar">
-        <span className={nativeLoaded ? 'ok' : 'err'}>
-          {nativeLoaded ? '● C++ 原生模块已注入' : '○ 未检测到 electronAPI'}
-        </span>
+        {/* 模型切换器 */}
+        <div className="model-switcher">
+          {MODELS.map((m) => (
+            <button
+              key={m.key}
+              className={modelSource === m.key ? 'active' : ''}
+              onClick={() => setModelSource(m.key)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 状态条 */}
+        <div className="status-bar">
+          <span className={nativeLoaded ? 'ok' : 'err'}>
+            {nativeLoaded ? '● C++ 原生模块已注入' : '○ 未检测到 electronAPI'}
+          </span>
+        </div>
       </div>
 
-      <main className="main">
-        <section className="panel">
-          <h2>1. C++ 原生自检</h2>
-          <p>在主进程调用 firefly_native.node，跑 5000 次能量计算，验证链路通。</p>
-          <button onClick={runNativeTest}>运行自检</button>
-        </section>
+      {/* 右侧 C++ 测试面板 */}
+      <div className={`side-panel ${panelOpen ? 'open' : 'closed'}`}>
+        <button className="panel-toggle" onClick={() => setPanelOpen(!panelOpen)}>
+          {panelOpen ? '›' : '‹ C++ 测试'}
+        </button>
 
-        <section className="panel">
-          <h2>2. 音频引擎（AudioEngine）</h2>
-          <p>创建 C++ AudioEngine，喂合成 PCM，计算 RMS 能量 + VAD 判断。</p>
-          <div className="row">
-            <button onClick={runAudioTest}>创建并测试</button>
-            <label>
-              阈值：
-              <input
-                type="range"
-                min="0"
-                max="0.5"
-                step="0.01"
-                value={threshold}
-                onChange={(e) => setThreshold(parseFloat(e.target.value))}
-              />
-              <span>{threshold.toFixed(2)}</span>
-            </label>
-            <button onClick={applyThreshold} disabled={!audioHandle}>应用阈值</button>
+        {panelOpen && (
+          <div className="panel-content">
+            <h2>Firefly Studio</h2>
+            <p className="subtitle">Electron + React + three.js + C++ 原生模块</p>
+
+            <section className="panel">
+              <h3>1. C++ 原生自检</h3>
+              <p>调用 firefly_native.node 跑 5000 次能量计算。</p>
+              <button onClick={runNativeTest}>运行自检</button>
+            </section>
+
+            <section className="panel">
+              <h3>2. 音频引擎</h3>
+              <p>创建 AudioEngine，喂合成 PCM，计算 RMS + VAD。</p>
+              <div className="row">
+                <button onClick={runAudioTest}>创建并测试</button>
+              </div>
+              <div className="row">
+                <label>
+                  阈值：
+                  <input
+                    type="range" min="0" max="0.5" step="0.01"
+                    value={threshold}
+                    onChange={(e) => setThreshold(parseFloat(e.target.value))}
+                  />
+                  <span>{threshold.toFixed(2)}</span>
+                </label>
+                <button onClick={applyThreshold} disabled={!audioHandle}>应用</button>
+              </div>
+            </section>
+
+            <section className="panel">
+              <h3>3. ASR 客户端</h3>
+              <p>创建 AsrClient，模拟流式喂 PCM（占位实现）。</p>
+              <button onClick={runAsrTest}>运行 ASR 模拟</button>
+            </section>
+
+            <section className="panel log-panel">
+              <h3>运行日志</h3>
+              <div className="log">
+                {log.length === 0 ? (
+                  <span className="dim">（空）点击按钮开始</span>
+                ) : (
+                  log.map((l, i) => <div key={i} className="log-line">{l}</div>)
+                )}
+              </div>
+            </section>
           </div>
-        </section>
-
-        <section className="panel">
-          <h2>3. ASR 客户端骨架</h2>
-          <p>创建 C++ AsrClient，模拟流式喂 PCM，观察"识别"输出（占位实现）。</p>
-          <button onClick={runAsrTest}>运行 ASR 模拟</button>
-        </section>
-
-        <section className="panel log-panel">
-          <h2>运行日志</h2>
-          <div className="log">
-            {log.length === 0 ? (
-              <span className="dim">（空）点击上方按钮开始</span>
-            ) : (
-              log.map((l, i) => <div key={i} className="log-line">{l}</div>)
-            )}
-          </div>
-        </section>
-      </main>
+        )}
+      </div>
     </div>
   )
 }

@@ -28,3 +28,7 @@ npm-debug.log*
 
 # electron-rebuild 产物（含 ABI 版本号目录）
 native/bin/
+
+# 3D 模型文件（大文件 + 许可限制，不提交）
+public/*.glb
+public/*.vrm
