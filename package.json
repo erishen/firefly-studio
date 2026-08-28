@@ -9,8 +9,8 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "prepare:electron": "bash scripts/prepare-electron.sh",
-    "native:build": "node-gyp rebuild --directory=native --debug",
-    "native:release": "node-gyp rebuild --directory=native",
+    "native:build": "bash scripts/build-native.sh debug",
+    "native:release": "bash scripts/build-native.sh release",
     "native:clean": "node-gyp clean --directory=native",
     "server": "node server/standalone.js",
     "postinstall": "electron-builder install-app-deps"
