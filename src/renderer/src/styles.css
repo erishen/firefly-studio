@@ -1,8 +1,4 @@
-.app {
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 24px;
-}
+/* —— 旧 .app 样式已迁移，见下方 Firefly Studio 布局 —— */
 
 .header {
   margin-bottom: 20px;
