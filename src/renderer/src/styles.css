@@ -1141,7 +1141,10 @@ canvas {
 
 .side-panel.closed {
   width: 0;
-  overflow: hidden;
+  overflow: visible;
+}
+.side-panel.closed .panel-content {
+  display: none;
 }
 
 .panel-toggle {
