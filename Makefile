@@ -1,14 +1,15 @@
 # Firefly Studio — Makefile
 # 常用命令封装，避免记 npm script 名
 
-.PHONY: help install prepare dev build start native native-release native-clean clean distclean
+.PHONY: help install prepare dev build start server native native-release native-clean clean distclean
 
 # 默认目标：显示帮助
 help:
 	@echo "Firefly Studio 常用命令："
 	@echo "  make install      安装 npm 依赖"
 	@echo "  make prepare      下载 arm64 Electron + 针对其 ABI 重建 C++ 原生模块"
-	@echo "  make dev          启动 Electron 开发模式（热重载）"
+	@echo "  make dev          启动 Electron 开发模式（含内置后端，热重载）"
+	@echo "  make server       单独启动后端（不启动 Electron，用于前端调试）"
 	@echo "  make build        构建三进程产物到 out/"
 	@echo "  make start        预览构建产物（electron-vite preview）"
 	@echo "  make native       编译 C++ 原生模块（Debug，可调试）"
@@ -28,6 +29,10 @@ prepare:
 # 开发模式（用包装脚本确保 Ctrl+C 正确清理）
 dev:
 	bash scripts/dev.sh
+
+# 单独启动后端（不启动 Electron）
+server:
+	npm run server
 
 # 构建
 build:

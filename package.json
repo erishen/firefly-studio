@@ -12,6 +12,7 @@
     "native:build": "node-gyp rebuild --directory=native --debug",
     "native:release": "node-gyp rebuild --directory=native",
     "native:clean": "node-gyp clean --directory=native",
+    "server": "node server/standalone.js",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
