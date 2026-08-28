@@ -28,12 +28,21 @@ export default function App() {
   const speakingRef = useRef(false)
   const [bubble, setBubble] = useState({ text: '', visible: false, who: 'ai' })
 
-  // 麦克风采集（C++ CoreAudio + VAD）
-  const mic = useMic()
-
   const chat = useResolveChat({
     endpoint: 'http://127.0.0.1:8787',
     systemPrompt: '你是 Firefly，一个友好的数字人助手。回答简洁自然，口语化。',
+  })
+
+  // 麦克风采集（C++ CoreAudio + VAD + Whisper ASR）
+  // 模型路径：开发模式下相对项目根，主进程 cwd 是项目根
+  const mic = useMic({
+    modelPath: 'native/models/ggml-base.bin',
+    onAsr: (text) => {
+      // ASR 识别完成后自动发送到聊天
+      if (text && text.trim()) {
+        chat.send(text.trim())
+      }
+    },
   })
 
   // 聊天回复联动数字人：说话时 speakingRef=true，显示气泡

@@ -134,24 +134,22 @@ function registerIpc() {
     return loadNative().asr.destroy(handle)
   })
 
-  // 麦克风采集（CoreAudio + VAD）
-  ipcMain.handle('mic:start', (e, sampleRate, frameMs, threshold) => {
+  // 麦克风采集（CoreAudio + VAD + Whisper ASR）
+  ipcMain.handle('mic:start', (e, sampleRate, frameMs, modelPath, options) => {
     const win = e.sender
     const mod = loadNative()
     const handle = mod.mic.start(
       sampleRate || 16000,
       frameMs || 20,
-      (frame) => {
-        // 音频线程回调，通过 webContents 发给渲染进程
-        win.send('mic:frame', { rms: frame.rms, isSpeech: frame.isSpeech })
-      },
-      (err) => {
-        win.send('mic:error', err)
-      }
+      modelPath || '',
+      // onFrame
+      (frame) => { win.send('mic:frame', { rms: frame.rms, isSpeech: frame.isSpeech }) },
+      // onAsr
+      (text) => { win.send('mic:asr', text) },
+      // onError
+      (err) => { win.send('mic:error', err) },
+      options || {}
     )
-    if (threshold !== undefined) {
-      mod.mic.setThreshold(handle, threshold)
-    }
     return handle
   })
   ipcMain.handle('mic:stop', (_e, handle) => {

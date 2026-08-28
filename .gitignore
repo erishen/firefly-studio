@@ -32,3 +32,7 @@ native/bin/
 # 3D 模型文件（大文件 + 许可限制，不提交）
 src/renderer/public/*.glb
 src/renderer/public/*.vrm
+
+# Whisper.cpp 第三方源码 + 模型（不提交，构建时自动克隆/下载）
+native/whisper.cpp/
+native/models/

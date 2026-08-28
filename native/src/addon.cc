@@ -171,36 +171,65 @@ Napi::Value DestroyAsr(const Napi::CallbackInfo& info) {
 }
 
 // ---- 麦克风采集 ----
-// mic.start(sampleRate, frameMs, onFrame({rms, isSpeech}), onError(msg)) -> handle
+// mic.start(sampleRate, frameMs, modelPath, onFrame, onAsr, onError, options) -> handle
+// options: { threshold, silenceMs, minSpeechMs }
 Napi::Value MicStart(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   int sample_rate = info[0].IsNumber() ? info[0].As<Napi::Number>().Int32Value() : 16000;
   int frame_ms = info[1].IsNumber() ? info[1].As<Napi::Number>().Int32Value() : 20;
-  Napi::Function on_frame = info[2].As<Napi::Function>();
-  Napi::Function on_error = info[3].IsFunction() ? info[3].As<Napi::Function>() : Napi::Function();
+  std::string model_path = info[2].IsString() ? info[2].As<Napi::String>().Utf8Value() : "";
+  Napi::Function on_frame = info[3].IsFunction() ? info[3].As<Napi::Function>() : Napi::Function();
+  Napi::Function on_asr = info[4].IsFunction() ? info[4].As<Napi::Function>() : Napi::Function();
+  Napi::Function on_error = info[5].IsFunction() ? info[5].As<Napi::Function>() : Napi::Function();
 
-  auto tsfn = Napi::ThreadSafeFunction::New(
-      env, on_frame, "mic-frame", 0, 1,
-      [](Napi::Env) {});
+  double threshold = 0.02;
+  int silence_ms = 700;
+  int min_speech_ms = 300;
+  if (info[6].IsObject()) {
+    Napi::Object opts = info[6].As<Napi::Object>();
+    if (opts.Has("threshold")) threshold = opts.Get("threshold").As<Napi::Number>().DoubleValue();
+    if (opts.Has("silenceMs")) silence_ms = opts.Get("silenceMs").As<Napi::Number>().Int32Value();
+    if (opts.Has("minSpeechMs")) min_speech_ms = opts.Get("minSpeechMs").As<Napi::Number>().Int32Value();
+  }
+
+  auto frame_tsfn = on_frame.IsFunction()
+      ? Napi::ThreadSafeFunction::New(env, on_frame, "mic-frame", 0, 1, [](Napi::Env) {})
+      : Napi::ThreadSafeFunction();
+
+  auto asr_tsfn = on_asr.IsFunction()
+      ? Napi::ThreadSafeFunction::New(env, on_asr, "mic-asr", 0, 1, [](Napi::Env) {})
+      : Napi::ThreadSafeFunction();
 
   auto error_tsfn = on_error.IsFunction()
-      ? Napi::ThreadSafeFunction::New(env, on_error, "mic-error", 0, 1,
-                                       [](Napi::Env) {})
+      ? Napi::ThreadSafeFunction::New(env, on_error, "mic-error", 0, 1, [](Napi::Env) {})
       : Napi::ThreadSafeFunction();
 
   int64_t h = g_next_handle++;
   auto mic = std::make_unique<firefly::MicCapture>();
+  mic->SetSpeechThreshold(threshold);
 
-  firefly::MicCallback cb = [tsfn](const firefly::MicFrame& frame) {
-    double rms = frame.rms;
-    bool is_speech = frame.is_speech;
-    tsfn.BlockingCall([rms, is_speech](Napi::Env env, Napi::Function js_cb) {
-      Napi::Object obj = Napi::Object::New(env);
-      obj.Set("rms", Napi::Number::New(env, rms));
-      obj.Set("isSpeech", Napi::Boolean::New(env, is_speech));
-      js_cb.Call({obj});
-    });
-  };
+  firefly::MicCallback frame_cb = nullptr;
+  if (on_frame.IsFunction()) {
+    frame_cb = [frame_tsfn](const firefly::MicFrame& frame) {
+      double rms = frame.rms;
+      bool is_speech = frame.is_speech;
+      frame_tsfn.BlockingCall([rms, is_speech](Napi::Env env, Napi::Function js_cb) {
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("rms", Napi::Number::New(env, rms));
+        obj.Set("isSpeech", Napi::Boolean::New(env, is_speech));
+        js_cb.Call({obj});
+      });
+    };
+  }
+
+  firefly::AsrResultCallback asr_cb = nullptr;
+  if (on_asr.IsFunction()) {
+    asr_cb = [asr_tsfn](const std::string& text) {
+      asr_tsfn.BlockingCall([text](Napi::Env env, Napi::Function js_cb) {
+        js_cb.Call({Napi::String::New(env, text)});
+      });
+    };
+  }
 
   firefly::MicErrorCallback err_cb = nullptr;
   if (on_error.IsFunction()) {
@@ -211,7 +240,9 @@ Napi::Value MicStart(const Napi::CallbackInfo& info) {
     };
   }
 
-  bool ok = mic->Start(sample_rate, frame_ms, std::move(cb), std::move(err_cb));
+  bool ok = mic->Start(sample_rate, frame_ms, model_path,
+                       silence_ms, min_speech_ms,
+                       std::move(frame_cb), std::move(asr_cb), std::move(err_cb));
   if (!ok) {
     throw Napi::Error::New(env, "mic start failed");
   }

@@ -27,18 +27,20 @@ const api = {
     destroy: (handle) => ipcRenderer.invoke('asr:destroy', handle),
   },
 
-  // 麦克风采集（CoreAudio + VAD）
+  // 麦克风采集（CoreAudio + VAD + Whisper ASR）
   mic: {
-    start: (sampleRate, frameMs, threshold) =>
-      ipcRenderer.invoke('mic:start', sampleRate, frameMs, threshold),
+    start: (sampleRate, frameMs, modelPath, options) =>
+      ipcRenderer.invoke('mic:start', sampleRate, frameMs, modelPath, options),
     stop: (handle) => ipcRenderer.invoke('mic:stop', handle),
     setThreshold: (handle, t) =>
       ipcRenderer.invoke('mic:setThreshold', handle, t),
     destroy: (handle) => ipcRenderer.invoke('mic:destroy', handle),
     onFrame: (cb) => ipcRenderer.on('mic:frame', (_e, data) => cb(data)),
+    onAsr: (cb) => ipcRenderer.on('mic:asr', (_e, text) => cb(text)),
     onError: (cb) => ipcRenderer.on('mic:error', (_e, msg) => cb(msg)),
     removeListeners: () => {
       ipcRenderer.removeAllListeners('mic:frame')
+      ipcRenderer.removeAllListeners('mic:asr')
       ipcRenderer.removeAllListeners('mic:error')
     },
   },

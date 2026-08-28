@@ -1,17 +1,16 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 
 /**
- * 麦克风采集 hook — 通过 C++ CoreAudio 采集 + VAD。
+ * 麦克风采集 hook — C++ CoreAudio 采集 + VAD + Whisper 本地 ASR。
  * - volume: 当前音量（0~1）
  * - isSpeaking: 是否检测到语音
+ * - transcript: ASR 识别结果（说话结束后自动填充）
  * - start/stop: 开始/停止采集
- *
- * 注意：当前只有音量 + VAD，没有 ASR（语音转文字）。
- * VAD 可用于检测说话开始/结束，后续接入 ASR 后可自动发送。
  */
-export function useMic({ onFrame, onError } = {}) {
+export function useMic({ modelPath, onFrame, onAsr, onError } = {}) {
   const [volume, setVolume] = useState(0)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [transcript, setTranscript] = useState('')
   const [active, setActive] = useState(false)
   const [error, setError] = useState(null)
   const handleRef = useRef(null)
@@ -23,16 +22,32 @@ export function useMic({ onFrame, onError } = {}) {
         return false
       }
       try {
-        const { sampleRate = 16000, frameMs = 20, threshold = 0.02 } = options
-        const handle = await window.electronAPI.mic.start(sampleRate, frameMs, threshold)
+        const {
+          sampleRate = 16000,
+          frameMs = 20,
+          threshold = 0.02,
+          silenceMs = 700,
+          minSpeechMs = 300,
+        } = options
+        const handle = await window.electronAPI.mic.start(
+          sampleRate,
+          frameMs,
+          modelPath || '',
+          { threshold, silenceMs, minSpeechMs }
+        )
         handleRef.current = handle
         setActive(true)
         setError(null)
+        setTranscript('')
 
         window.electronAPI.mic.onFrame((frame) => {
           setVolume(frame.rms)
           setIsSpeaking(frame.isSpeech)
           onFrame?.(frame)
+        })
+        window.electronAPI.mic.onAsr((text) => {
+          setTranscript(text)
+          onAsr?.(text)
         })
         window.electronAPI.mic.onError((msg) => {
           setError(msg)
@@ -44,7 +59,7 @@ export function useMic({ onFrame, onError } = {}) {
         return false
       }
     },
-    [onFrame, onError],
+    [modelPath, onFrame, onAsr, onError],
   )
 
   const stop = useCallback(async () => {
@@ -67,5 +82,5 @@ export function useMic({ onFrame, onError } = {}) {
     }
   }, [stop])
 
-  return { volume, isSpeaking, active, error, start, stop }
+  return { volume, isSpeaking, transcript, active, error, start, stop }
 }
