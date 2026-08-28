@@ -30,5 +30,5 @@ npm-debug.log*
 native/bin/
 
 # 3D 模型文件（大文件 + 许可限制，不提交）
-public/*.glb
-public/*.vrm
+src/renderer/public/*.glb
+src/renderer/public/*.vrm
