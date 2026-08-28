@@ -23,6 +23,7 @@ export default function App() {
   const [panelOpen, setPanelOpen] = useState(true)
   const [activeTab, setActiveTab] = useState('chat') // 'chat' | 'native'
   const [input, setInput] = useState('')
+  const [voiceEnabled, setVoiceEnabled] = useState(true)
   const speakingRef = useRef(false)
   const [bubble, setBubble] = useState({ text: '', visible: false, who: 'ai' })
 
@@ -39,8 +40,36 @@ export default function App() {
     }
   }
   chat.onDoneRef.current = () => {
-    speakingRef.current = false
+    // 如果开启了语音，朗读最终回复
+    if (voiceEnabled && chat.messages.length > 0) {
+      const lastMsg = chat.messages[chat.messages.length - 1]
+      if (lastMsg?.role === 'assistant' && lastMsg.content) {
+        speak(lastMsg.content)
+      } else {
+        speakingRef.current = false
+      }
+    } else {
+      speakingRef.current = false
+    }
   }
+
+  // TTS 语音合成
+  const speak = useCallback((text) => {
+    if (!window.speechSynthesis) return
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'zh-CN'
+    utterance.rate = 1.0
+    utterance.pitch = 1.0
+    // 优先选中文语音
+    const voices = window.speechSynthesis.getVoices()
+    const zhVoice = voices.find((v) => v.lang.startsWith('zh'))
+    if (zhVoice) utterance.voice = zhVoice
+    utterance.onstart = () => { speakingRef.current = true }
+    utterance.onend = () => { speakingRef.current = false }
+    utterance.onerror = () => { speakingRef.current = false }
+    window.speechSynthesis.speak(utterance)
+  }, [])
 
   const pushLog = useCallback((msg) => {
     setLog((prev) => [...prev.slice(-50), `${new Date().toLocaleTimeString()}  ${msg}`])
@@ -232,12 +261,23 @@ export default function App() {
                     disabled={chat.streaming}
                   />
                   {chat.streaming ? (
-                    <button className="chat-stop" onClick={chat.stop}>停止</button>
+                    <button className="chat-stop" onClick={() => { chat.stop(); window.speechSynthesis?.cancel() }}>停止</button>
                   ) : (
                     <button className="chat-send" onClick={handleSend} disabled={!input.trim()}>发送</button>
                   )}
                 </div>
-                <button className="chat-clear" onClick={chat.clear}>清空对话</button>
+                <div className="chat-actions">
+                  <button className="chat-clear" onClick={() => { chat.clear(); window.speechSynthesis?.cancel() }}>清空对话</button>
+                  <button
+                    className={`chat-voice ${voiceEnabled ? 'on' : 'off'}`}
+                    onClick={() => {
+                      setVoiceEnabled(!voiceEnabled)
+                      if (voiceEnabled) window.speechSynthesis?.cancel()
+                    }}
+                  >
+                    {voiceEnabled ? '🔊 语音开' : '🔇 语音关'}
+                  </button>
+                </div>
               </div>
             )}
 
