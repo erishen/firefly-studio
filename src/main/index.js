@@ -81,15 +81,24 @@ function registerIpc() {
     return mod.test(loops || 1000)
   })
 
+  // 把 IPC 传来的 ArrayBuffer / Uint8Array 转成 Node Buffer（C++ 模块需要 Buffer）
+  const toBuffer = (buf) => {
+    if (Buffer.isBuffer(buf)) return buf
+    if (buf instanceof ArrayBuffer) return Buffer.from(buf)
+    if (buf?.buffer instanceof ArrayBuffer) return Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength)
+    if (ArrayBuffer.isView(buf)) return Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength)
+    return buf
+  }
+
   // 音频引擎
   ipcMain.handle('audio:create', (_e, sampleRate) => {
     return loadNative().audio.create(sampleRate || 16000)
   })
   ipcMain.handle('audio:feedRms', (_e, handle, buf) => {
-    return loadNative().audio.feedRms(handle, buf)
+    return loadNative().audio.feedRms(handle, toBuffer(buf))
   })
   ipcMain.handle('audio:isSpeech', (_e, handle, buf) => {
-    return loadNative().audio.isSpeech(handle, buf)
+    return loadNative().audio.isSpeech(handle, toBuffer(buf))
   })
   ipcMain.handle('audio:setThreshold', (_e, handle, t) => {
     return loadNative().audio.setThreshold(handle, t)
@@ -106,7 +115,7 @@ function registerIpc() {
     return loadNative().asr.start(handle, sampleRate || 16000)
   })
   ipcMain.handle('asr:feed', (_e, handle, buf) => {
-    return loadNative().asr.feed(handle, buf)
+    return loadNative().asr.feed(handle, toBuffer(buf))
   })
   ipcMain.handle('asr:finalize', (_e, handle) => {
     return loadNative().asr.finalize(handle)
