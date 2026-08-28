@@ -25,6 +25,17 @@ cleanup() {
 trap cleanup INT TERM
 
 echo "==> 启动 Firefly Studio 开发模式..."
+
+# 启动前释放 8787 端口（防止上次残留或独立 make server 占用）
+PORT=8787
+if lsof -ti:$PORT >/dev/null 2>&1; then
+  echo "==> 端口 $PORT 被占用，正在释放..."
+  lsof -ti:$PORT | xargs kill -TERM 2>/dev/null || true
+  sleep 1
+  # 兜底强杀
+  lsof -ti:$PORT | xargs kill -9 2>/dev/null || true
+fi
+
 npm run dev &
 DEV_PID=$!
 wait "$DEV_PID"
