@@ -8,6 +8,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { createRequire } from 'module'
+import { startServer } from '../../server/index.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -142,6 +143,12 @@ app.whenReady().then(() => {
     console.warn('[native] 启动时加载失败：', e.message)
   }
   registerIpc()
+  // 启动内置后端（/api/chat SSE），渲染进程直接调用本地 8787
+  try {
+    startServer({ port: 8787, host: '127.0.0.1' })
+  } catch (e) {
+    console.warn('[server] 内置后端启动失败：', e.message)
+  }
   createWindow()
 
   app.on('activate', () => {
