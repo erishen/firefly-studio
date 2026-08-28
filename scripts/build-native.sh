@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 针对 Electron ABI + 运行时架构构建 C++ 原生模块。
-# 自动检测 Electron 运行时架构（arm64/x64），避免架构不匹配导致 dlopen 失败。
+# 使用 node-gyp 直接编译（比 electron-rebuild 更可靠，避免缓存/同名文件问题）。
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -14,36 +14,33 @@ if [ -x "$ELECTRON_BIN" ]; then
 else
   RUNTIME_ARCH="$(uname -m)"
 fi
-# uname -m 返回 arm64/x86_64，electron-rebuild 用 arm64/x64
+# uname -m 返回 arm64/x86_64，node-gyp 用 arm64/x64
 if [ "$RUNTIME_ARCH" = "x86_64" ]; then RUNTIME_ARCH="x64"; fi
 
-BUILD_TYPE="${1:-release}"  # release | debug
+BUILD_TYPE="${1:-release}"
 echo "==> 构建 firefly_native (Electron v${ELECTRON_VERSION}, arch: ${RUNTIME_ARCH}, type: ${BUILD_TYPE})"
 
 # 确保 whisper.cpp 源码存在
 if [ ! -d "native/whisper.cpp" ]; then
-  echo "==> 克隆 whisper.cpp 源码 ..."
-  git clone --depth 1 https://github.com/ggerganov/whisper.cpp.git native/whisper.cpp
+  echo "==> 克隆 whisper.cpp v1.7.3 ..."
+  git clone --depth 1 --branch v1.7.3 https://github.com/ggerganov/whisper.cpp.git native/whisper.cpp
 fi
 
 # 确保模型存在（可选，没有也能编译，只是运行时 ASR 不可用）
 if [ ! -f "native/models/ggml-base.bin" ]; then
   echo "⚠️  Whisper 模型未找到 (native/models/ggml-base.bin)，ASR 将不可用"
-  echo "   下载: bash native/whisper.cpp/models/download-ggml-model.sh base"
+  echo "   下载: mkdir -p native/models && curl -L -o native/models/ggml-base.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"
 fi
 
-# 用 electron-rebuild 针对 Electron ABI 编译
-PYTHON="${PYTHON:-python3}" ./node_modules/.bin/electron-rebuild \
-  -f -v "${ELECTRON_VERSION}" -a "${RUNTIME_ARCH}" -m ./native
+# 清理旧构建
+rm -rf native/build
 
-# electron-rebuild 默认只生成 Release，如需 Debug 额外编译
-if [ "$BUILD_TYPE" = "debug" ]; then
-  echo "==> 额外编译 Debug 版本 ..."
-  cd native
-  PYTHON="${PYTHON:-python3}" ../node_modules/.bin/node-gyp rebuild --debug \
-    --target="${ELECTRON_VERSION}" --arch="${RUNTIME_ARCH}" --dist-url=https://electronjs.org/headers
-  cd ..
-fi
+# 用 node-gyp 直接针对 Electron ABI 编译
+PYTHON="${PYTHON:-python3}" ./node_modules/.bin/node-gyp rebuild \
+  --directory=native \
+  --target="${ELECTRON_VERSION}" \
+  --arch="${RUNTIME_ARCH}" \
+  --dist-url=https://electronjs.org/headers
 
 echo ""
 echo "✅ 构建完成: native/build/Release/firefly_native.node"

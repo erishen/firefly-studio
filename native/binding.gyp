@@ -14,14 +14,19 @@
         "whisper.cpp/ggml/src/ggml-quants.c",
         "whisper.cpp/ggml/src/ggml-backend.cpp",
         "whisper.cpp/ggml/src/ggml-backend-reg.cpp",
-        "whisper.cpp/ggml/src/ggml-backend-meta.cpp",
-        "whisper.cpp/ggml/src/ggml-backend-dl.cpp"
+        "whisper.cpp/ggml/src/ggml-threading.cpp",
+        "src/ggml-cpu-c.c",
+        "whisper.cpp/ggml/src/ggml-cpu/ggml-cpu.cpp",
+        "whisper.cpp/ggml/src/ggml-cpu/ggml-cpu-quants.c",
+        "whisper.cpp/ggml/src/ggml-cpu/ggml-cpu-traits.cpp",
+        "whisper.cpp/ggml/src/ggml-cpu/cpu-feats-x86.cpp"
       ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")",
         "whisper.cpp/include",
         "whisper.cpp/ggml/include",
         "whisper.cpp/ggml/src",
+        "whisper.cpp/ggml/src/ggml-cpu",
         "whisper.cpp/src"
       ],
       "cflags": [
@@ -57,8 +62,9 @@
       "defines": [
         "NAPI_CPP_EXCEPTIONS",
         "GGML_USE_ACCELERATE",
-        "WHISPER_VERSION=\"1.9.3\"",
-        "GGML_VERSION=\"0.22.0\"",
+        "GGML_USE_CPU",
+        "WHISPER_VERSION=\"1.7.3\"",
+        "GGML_VERSION=\"0.2.10\"",
         "GGML_COMMIT=\"unknown\"",
         "NDEBUG"
       ],
