@@ -89,7 +89,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>Electron Avatar <span className="badge">骨架 v0.1</span></h1>
+        <h1>Firefly Studio <span className="badge">骨架 v0.1</span></h1>
         <p>Electron + React + three.js + C++ 原生模块（node-addon-api，可调试）</p>
       </header>
 
