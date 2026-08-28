@@ -102,8 +102,10 @@ export async function* streamChat(messages, options = {}) {
       if (data === '[DONE]') return
       try {
         const json = JSON.parse(data)
-        const delta = json.choices?.[0]?.delta?.content
-        if (delta) yield delta
+        const delta = json.choices?.[0]?.delta
+        if (!delta) continue
+        // 只输出最终答案 content，忽略推理模型的思考过程 reasoning_content
+        if (delta.content) yield delta.content
       } catch {
         // 忽略解析错误
       }

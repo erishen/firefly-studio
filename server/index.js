@@ -59,7 +59,9 @@ export function startServer({ port = DEFAULT_PORT, host = DEFAULT_HOST } = {}) {
         }
 
         const ac = new AbortController()
-        req.on('close', () => ac.abort())
+        // SSE 长连接用 res.on('close') 检测客户端断开
+        // req.on('close') 会在请求完成时立即触发，导致过早 abort
+        res.on('close', () => ac.abort())
 
         // SSE handshake
         res.writeHead(200, {
