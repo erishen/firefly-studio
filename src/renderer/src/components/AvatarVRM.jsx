@@ -244,15 +244,15 @@ export default function AvatarVRM({ url, token, speakingRef, blinkRef, onClick }
         
       }
     }
-    // 统一走「fetch 字节 + 缓存」：无论是否带令牌、是否跨域，都能复用浏览器缓存秒开。
-    const headers = token ? { Authorization: 'Bearer ' + token } : undefined
-    loadModelBytes(url, headers, report)
-      .then(({ buf, fromCache }) => {
-        if (disposed) return
-        loadFromCache = fromCache
-        loader.parse(buf, '', (gltf) => onLoaded(gltf, fromCache), onError)
-      })
-      .catch(onError)
+    // 直接用 GLTFLoader.load，简单可靠（Electron 环境下 Cache API/fetch 字节可能有问题）
+    loader.load(
+      url,
+      (gltf) => onLoaded(gltf, false),
+      (xhr) => {
+        if (xhr.total) report(Math.round((xhr.loaded / xhr.total) * 100))
+      },
+      onError
+    )
     return () => {
       disposed = true
     }

@@ -17,6 +17,7 @@ export default defineConfig({
   },
   renderer: {
     plugins: [react()],
+    publicDir: 'src/renderer/public',
     resolve: {
       alias: {
         '@': resolve('src/renderer/src')
