@@ -1,0 +1,32 @@
+{
+  "name": "electron-avatar",
+  "version": "0.1.0",
+  "description": "Electron 3D virtual human (firefly port) with debuggable C++ native module",
+  "main": "./out/main/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "prepare:electron": "bash scripts/prepare-electron.sh",
+    "native:build": "node-gyp rebuild --directory=native --debug",
+    "native:release": "node-gyp rebuild --directory=native",
+    "native:clean": "node-gyp clean --directory=native",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.2",
+    "electron": "^31.7.7",
+    "electron-vite": "^2.3.0",
+    "vite": "^5.4.8",
+    "node-addon-api": "^8.1.0",
+    "node-gyp": "^10.2.0",
+    "electron-rebuild": "^3.2.9",
+    "electron-builder": "^25.1.8"
+  }
+}

@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+out/
+
+# Native build
+native/build/
+native/.node-gyp/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+
+# Env
+.env
+.env.local
+
+# IDE
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+
+# Electron 临时二进制（prepare-electron.sh 已部署到 node_modules/electron/dist）
+.electron-bin/
+
+# electron-rebuild 产物（含 ABI 版本号目录）
+native/bin/
