@@ -457,17 +457,7 @@ canvas {
   line-height: 1.5;
 }
 
-/* —— 对话记录面板（渲染 chat.history，刷新后从 localStorage 恢复） —— */
-.chat-panel {
-  display: flex;
-  flex-direction: column;
-  margin-top: 2px;
-  background: rgba(3, 12, 18, 0.46);
-  border: 1px solid rgba(111, 224, 207, 0.16);
-  border-radius: 12px;
-  overflow: hidden;
-  pointer-events: auto; /* overlay 默认 none，单独打开让面板可滚动/选中 */
-}
+/* —— 旧对话记录面板样式已迁移，见下方 .chat-panel 新定义 —— */
 
 .chat-log-head {
   display: flex;
@@ -1168,6 +1158,9 @@ canvas {
   padding: 16px;
   overflow-y: auto;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .panel-content h2 {
@@ -1294,7 +1287,8 @@ canvas {
 .chat-panel {
   display: flex;
   flex-direction: column;
-  height: calc(100% - 120px);
+  flex: 1;
+  min-height: 0;
 }
 .chat-messages {
   flex: 1;
