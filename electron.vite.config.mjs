@@ -1,6 +1,9 @@
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   main: {
@@ -17,7 +20,7 @@ export default defineConfig({
   },
   renderer: {
     plugins: [react()],
-    publicDir: 'src/renderer/public',
+    publicDir: resolve(__dirname, 'src/renderer/public'),
     resolve: {
       alias: {
         '@': resolve('src/renderer/src')
