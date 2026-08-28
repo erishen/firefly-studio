@@ -1,7 +1,7 @@
 {
   "name": "qt-native",
   "version": "0.1.0",
-  "description": "Native C++ module for electron-avatar (audio engine + ASR client skeleton)",
+  "description": "Native C++ module for avatar-studio (audio engine + ASR client skeleton)",
   "main": "build/Release/qt_native.node",
   "gypfile": true,
   "dependencies": {

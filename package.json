@@ -1,5 +1,5 @@
 {
-  "name": "electron-avatar",
+  "name": "avatar-studio",
   "version": "0.1.0",
   "description": "Electron 3D virtual human (firefly port) with debuggable C++ native module",
   "main": "./out/main/index.js",

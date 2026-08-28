@@ -1,4 +1,4 @@
-# Electron Avatar — 可调试 C++ 的 Electron 数字人骨架
+# Avatar Studio — 可调试 C++ 的 Electron 数字人工作台
 
 把 firefly（React + three.js 3D 数字人）迁到 Electron，主进程通过
 node-addon-api 加载 **C++ 原生模块**（后续可对接 QtEngine 的 ASR / WebSocket /
@@ -16,7 +16,7 @@ node-addon-api 加载 **C++ 原生模块**（后续可对接 QtEngine 的 ASR / 
 ## 目录结构
 
 ```
-work/electron/
+work/avatar-studio/
 ├── electron.vite.config.mjs   # electron-vite 三进程构建配置
 ├── scripts/
 │   └── prepare-electron.sh    # 一键准备 arm64 Electron + 重建 native
