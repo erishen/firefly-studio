@@ -3,14 +3,11 @@
  * 支持流式输出，返回 async generator。
  */
 import { readFileSync } from 'node:fs'
-import { resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
-// 从项目根 .env 读取配置（简单解析，不引入 dotenv 依赖）
+// 从项目根 .env 读取配置（用 process.cwd() 而非 __dirname，因为 electron-vite 打包后 __dirname 会变）
 function loadEnv() {
-  const envPath = resolve(__dirname, '../.env')
+  const envPath = resolve(process.cwd(), '.env')
   try {
     const content = readFileSync(envPath, 'utf-8')
     const env = {}
