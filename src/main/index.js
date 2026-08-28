@@ -12,6 +12,15 @@ import { createRequire } from 'module'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 
+// ---- 禁用 Chromium 联网组件（避免大陆网络下 SSL 握手错误刷屏）----
+// 这些组件（自动更新、安全浏览、组件更新）在无外网时会反复报 SSL handshake failed
+app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors,NetworkServiceInProcess')
+app.commandLine.appendSwitch('safebrowsing-disable-auto-update')
+app.commandLine.appendSwitch('disable-component-update')
+app.commandLine.appendSwitch('disable-background-networking')
+// 忽略证书错误（开发期；生产环境应移除）
+app.commandLine.appendSwitch('ignore-certificate-errors')
+
 // ---- 加载 C++ 原生模块 ----
 // 开发期在 native/build/Debug/qt_native.node；electron-vite 会把主进程
 // 产物输出到 out/main。这里用 createRequire 解析绝对路径。
