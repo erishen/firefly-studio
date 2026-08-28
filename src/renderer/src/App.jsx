@@ -102,7 +102,7 @@ export default function App() {
       <main className="main">
         <section className="panel">
           <h2>1. C++ 原生自检</h2>
-          <p>在主进程调用 qt_native.node，跑 5000 次能量计算，验证链路通。</p>
+          <p>在主进程调用 firefly_native.node，跑 5000 次能量计算，验证链路通。</p>
           <button onClick={runNativeTest}>运行自检</button>
         </section>
 

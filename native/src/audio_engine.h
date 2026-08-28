@@ -1,14 +1,14 @@
-#ifndef QT_NATIVE_AUDIO_ENGINE_H
-#define QT_NATIVE_AUDIO_ENGINE_H
+#ifndef FIREFLY_NATIVE_AUDIO_ENGINE_H
+#define FIREFLY_NATIVE_AUDIO_ENGINE_H
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace qtnative {
+namespace firefly {
 
 // 简单的音频能量 / VAD 检测引擎。
-// 后续可替换 / 扩展为 QtEngine 的 audio_level + portaudio 采集。
+// 后续可扩展为 portaudio 采集等真实音频输入。
 // 保持纯 C++、无第三方依赖，便于直接在调试器中单步跟踪。
 class AudioEngine {
  public:
@@ -37,6 +37,6 @@ class AudioEngine {
   double smoothing_alpha_ = 0.2;  // 一阶低通平滑系数
 };
 
-}  // namespace qtnative
+}  // namespace firefly
 
-#endif  // QT_NATIVE_AUDIO_ENGINE_H
+#endif  // FIREFLY_NATIVE_AUDIO_ENGINE_H

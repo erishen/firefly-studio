@@ -1,7 +1,7 @@
 // 主进程入口。
 // 职责：
 //   1. 创建 BrowserWindow
-//   2. 加载 C++ 原生模块（qt_native.node）
+//   2. 加载 C++ 原生模块（firefly_native.node）
 //   3. 通过 IPC 把 C++ 能力桥接给渲染进程
 
 import { app, BrowserWindow, ipcMain } from 'electron'
@@ -22,11 +22,11 @@ app.commandLine.appendSwitch('disable-background-networking')
 app.commandLine.appendSwitch('ignore-certificate-errors')
 
 // ---- 加载 C++ 原生模块 ----
-// 开发期在 native/build/Debug/qt_native.node；electron-vite 会把主进程
+// 开发期在 native/build/Debug/firefly_native.node；electron-vite 会把主进程
 // 产物输出到 out/main。这里用 createRequire 解析绝对路径。
-let qtNative = null
+let nativeMod = null
 function loadNative() {
-  if (qtNative) return qtNative
+  if (nativeMod) return nativeMod
   // 多种定位方式兜底：
   // 1) 相对当前模块（dev 时 out/main，实际文件在源码树里）
   // 2) 相对 app 根目录
@@ -38,24 +38,24 @@ function loadNative() {
   ]
   const candidates = []
   // 相对 out/main 时 native 在 ../../native；相对 app 根 / cwd 时在 native/
-  candidates.push(join(baseDirs[0], '../../native/build/Release/qt_native.node'))
-  candidates.push(join(baseDirs[0], '../../native/build/Debug/qt_native.node'))
+  candidates.push(join(baseDirs[0], '../../native/build/Release/firefly_native.node'))
+  candidates.push(join(baseDirs[0], '../../native/build/Debug/firefly_native.node'))
   for (const base of baseDirs.slice(1)) {
-    candidates.push(join(base, 'native/build/Release/qt_native.node'))
-    candidates.push(join(base, 'native/build/Debug/qt_native.node'))
+    candidates.push(join(base, 'native/build/Release/firefly_native.node'))
+    candidates.push(join(base, 'native/build/Debug/firefly_native.node'))
   }
   const errors = []
   for (const p of candidates) {
     try {
-      qtNative = require(p)
+      nativeMod = require(p)
       console.log('[native] 已加载 C++ 模块 @', p)
-      return qtNative
+      return nativeMod
     } catch (e) {
       errors.push(`${p}: ${e.code || e.message}`)
     }
   }
   throw new Error(
-    'qt_native.node 未找到，请先执行: npm run native:build。\n尝试过的路径:\n' +
+    'firefly_native.node 未找到，请先执行: npm run native:build。\n尝试过的路径:\n' +
       errors.slice(0, 4).join('\n')
   )
 }

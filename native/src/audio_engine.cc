@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace qtnative {
+namespace firefly {
 
 AudioEngine::AudioEngine(int sample_rate) {
   (void)sample_rate;  // 预留：后续 VAD 断句按采样率换算帧时长
@@ -39,4 +39,4 @@ void AudioEngine::SetSpeechThreshold(double threshold) {
 
 void AudioEngine::Reset() { smoothed_energy_ = 0.0; }
 
-}  // namespace qtnative
+}  // namespace firefly

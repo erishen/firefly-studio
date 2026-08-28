@@ -1,7 +1,7 @@
 {
   "targets": [
     {
-      "target_name": "qt_native",
+      "target_name": "firefly_native",
       "sources": [
         "src/addon.cc",
         "src/audio_engine.cc",

@@ -1,16 +1,16 @@
-#ifndef QT_NATIVE_ASR_CLIENT_H
-#define QT_NATIVE_ASR_CLIENT_H
+#ifndef FIREFLY_NATIVE_ASR_CLIENT_H
+#define FIREFLY_NATIVE_ASR_CLIENT_H
 
 #include <functional>
 #include <string>
 
-namespace qtnative {
+namespace firefly {
 
 // ASR 客户端接口骨架。
-// 目标形态：与 QtEngine 的 asr 模块对齐 ——
+// 目标形态：标准 ASR 客户端接口 ——
 //   流式 PCM 输入 -> 云端 WS -> 回调文本（OnProgress / OnComplete）。
 // 现阶段先用"占位实现"模拟识别流程，方便在主进程里打通 IPC 链路并调试，
-// 后续接入真实 WS（或 QtEngine 的 asr 库）时保持接口不变。
+// 后续接入真实 WebSocket ASR 服务时保持接口不变。
 class AsrClient {
  public:
   // 回调：中间结果 / 最终结果
@@ -50,6 +50,6 @@ class AsrClient {
   CompleteCallback on_complete_;
 };
 
-}  // namespace qtnative
+}  // namespace firefly
 
-#endif  // QT_NATIVE_ASR_CLIENT_H
+#endif  // FIREFLY_NATIVE_ASR_CLIENT_H

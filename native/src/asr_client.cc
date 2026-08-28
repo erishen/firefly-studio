@@ -1,6 +1,6 @@
 #include "asr_client.h"
 
-namespace qtnative {
+namespace firefly {
 
 AsrClient::AsrClient() = default;
 AsrClient::~AsrClient() = default;
@@ -62,4 +62,4 @@ std::string AsrClient::Finalize() {
   return result;
 }
 
-}  // namespace qtnative
+}  // namespace firefly

@@ -1,8 +1,8 @@
 {
-  "name": "qt-native",
+  "name": "firefly-native",
   "version": "0.1.0",
   "description": "Native C++ module for firefly-studio (audio engine + ASR client skeleton)",
-  "main": "build/Release/qt_native.node",
+  "main": "build/Release/firefly_native.node",
   "gypfile": true,
   "dependencies": {
     "node-addon-api": "^8.1.0"

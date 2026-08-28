@@ -1,4 +1,4 @@
-// qt_native addon —— Electron 主进程通过它调用 C++ 能力。
+// firefly_native addon —— Electron 主进程通过它调用 C++ 能力。
 // 暴露的模块结构：
 //   {
 //     version: string,
@@ -32,18 +32,18 @@
 namespace {
 
 // ---- 句柄表：把 JS 句柄(int) 映射到 C++ 对象，避免直接暴露裸指针 ----
-std::unordered_map<int64_t, std::unique_ptr<qtnative::AudioEngine>> g_audio;
-std::unordered_map<int64_t, std::unique_ptr<qtnative::AsrClient>> g_asr;
+std::unordered_map<int64_t, std::unique_ptr<firefly::AudioEngine>> g_audio;
+std::unordered_map<int64_t, std::unique_ptr<firefly::AsrClient>> g_asr;
 int64_t g_next_handle = 1;
 
 int64_t AllocAudio(int sample_rate) {
   int64_t h = g_next_handle++;
-  g_audio[h] = std::make_unique<qtnative::AudioEngine>(sample_rate);
+  g_audio[h] = std::make_unique<firefly::AudioEngine>(sample_rate);
   return h;
 }
 
 int64_t AllocAsr(const std::string& address, const std::string& token) {
-  auto client = std::make_unique<qtnative::AsrClient>();
+  auto client = std::make_unique<firefly::AsrClient>();
   client->Initialize(address, token);
   int64_t h = g_next_handle++;
   g_asr[h] = std::move(client);
@@ -173,7 +173,7 @@ Napi::Value Test(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   int loops = info[0].IsNumber() ? info[0].As<Napi::Number>().Int32Value() : 1000;
 
-  qtnative::AudioEngine engine(16000);
+  firefly::AudioEngine engine(16000);
   std::vector<int16_t> frame(1600);  // 100ms @16k
   for (auto& s : frame) s = 1000;    // 固定电平
 
@@ -219,4 +219,4 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
 
 }  // namespace
 
-NODE_API_MODULE(qt_native, Init)
+NODE_API_MODULE(firefly_native, Init)
