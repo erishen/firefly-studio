@@ -28,12 +28,14 @@
 
 #include "asr_client.h"
 #include "audio_engine.h"
+#include "mic_capture.h"
 
 namespace {
 
 // ---- 句柄表：把 JS 句柄(int) 映射到 C++ 对象，避免直接暴露裸指针 ----
 std::unordered_map<int64_t, std::unique_ptr<firefly::AudioEngine>> g_audio;
 std::unordered_map<int64_t, std::unique_ptr<firefly::AsrClient>> g_asr;
+std::unordered_map<int64_t, std::unique_ptr<firefly::MicCapture>> g_mic;
 int64_t g_next_handle = 1;
 
 int64_t AllocAudio(int sample_rate) {
@@ -168,6 +170,81 @@ Napi::Value DestroyAsr(const Napi::CallbackInfo& info) {
   return env.Undefined();
 }
 
+// ---- 麦克风采集 ----
+// mic.start(sampleRate, frameMs, onFrame({rms, isSpeech}), onError(msg)) -> handle
+Napi::Value MicStart(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  int sample_rate = info[0].IsNumber() ? info[0].As<Napi::Number>().Int32Value() : 16000;
+  int frame_ms = info[1].IsNumber() ? info[1].As<Napi::Number>().Int32Value() : 20;
+  Napi::Function on_frame = info[2].As<Napi::Function>();
+  Napi::Function on_error = info[3].IsFunction() ? info[3].As<Napi::Function>() : Napi::Function();
+
+  auto tsfn = Napi::ThreadSafeFunction::New(
+      env, on_frame, "mic-frame", 0, 1,
+      [](Napi::Env) {});
+
+  auto error_tsfn = on_error.IsFunction()
+      ? Napi::ThreadSafeFunction::New(env, on_error, "mic-error", 0, 1,
+                                       [](Napi::Env) {})
+      : Napi::ThreadSafeFunction();
+
+  int64_t h = g_next_handle++;
+  auto mic = std::make_unique<firefly::MicCapture>();
+
+  firefly::MicCallback cb = [tsfn](const firefly::MicFrame& frame) {
+    double rms = frame.rms;
+    bool is_speech = frame.is_speech;
+    tsfn.BlockingCall([rms, is_speech](Napi::Env env, Napi::Function js_cb) {
+      Napi::Object obj = Napi::Object::New(env);
+      obj.Set("rms", Napi::Number::New(env, rms));
+      obj.Set("isSpeech", Napi::Boolean::New(env, is_speech));
+      js_cb.Call({obj});
+    });
+  };
+
+  firefly::MicErrorCallback err_cb = nullptr;
+  if (on_error.IsFunction()) {
+    err_cb = [error_tsfn](const std::string& msg) {
+      error_tsfn.BlockingCall([msg](Napi::Env env, Napi::Function js_cb) {
+        js_cb.Call({Napi::String::New(env, msg)});
+      });
+    };
+  }
+
+  bool ok = mic->Start(sample_rate, frame_ms, std::move(cb), std::move(err_cb));
+  if (!ok) {
+    throw Napi::Error::New(env, "mic start failed");
+  }
+
+  g_mic[h] = std::move(mic);
+  return Napi::Number::New(env, static_cast<double>(h));
+}
+
+Napi::Value MicStop(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  int64_t h = info[0].As<Napi::Number>().Int64Value();
+  auto it = g_mic.find(h);
+  if (it != g_mic.end()) it->second->Stop();
+  return env.Undefined();
+}
+
+Napi::Value MicSetThreshold(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  int64_t h = info[0].As<Napi::Number>().Int64Value();
+  auto it = g_mic.find(h);
+  if (it == g_mic.end()) throw Napi::Error::New(env, "invalid mic handle");
+  double t = info[1].As<Napi::Number>().DoubleValue();
+  it->second->SetSpeechThreshold(t);
+  return env.Undefined();
+}
+
+Napi::Value MicDestroy(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  int64_t h = info[0].As<Napi::Number>().Int64Value();
+  g_mic.erase(h);
+  return env.Undefined();
+}
+
 // 自检：跑 N 次能量计算，返回耗时 ms。用于验证原生模块正常、也可做断点验证。
 Napi::Value Test(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
@@ -212,6 +289,14 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   asr.Set("finalize", Napi::Function::New(env, AsrFinalize));
   asr.Set("destroy", Napi::Function::New(env, DestroyAsr));
   exports.Set("asr", asr);
+
+  // mic 命名空间（CoreAudio 麦克风采集 + VAD）
+  Napi::Object mic = Napi::Object::New(env);
+  mic.Set("start", Napi::Function::New(env, MicStart));
+  mic.Set("stop", Napi::Function::New(env, MicStop));
+  mic.Set("setThreshold", Napi::Function::New(env, MicSetThreshold));
+  mic.Set("destroy", Napi::Function::New(env, MicDestroy));
+  exports.Set("mic", mic);
 
   exports.Set("test", Napi::Function::New(env, Test));
   return exports;

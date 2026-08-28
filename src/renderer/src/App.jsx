@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import Stage from './components/Stage'
 import { useResolveChat } from './hooks/useResolveChat'
+import { useMic } from './hooks/useMic'
 
 const hasNative = typeof window !== 'undefined' && !!window.electronAPI
 
@@ -26,6 +27,9 @@ export default function App() {
   const [voiceEnabled, setVoiceEnabled] = useState(true)
   const speakingRef = useRef(false)
   const [bubble, setBubble] = useState({ text: '', visible: false, who: 'ai' })
+
+  // 麦克风采集（C++ CoreAudio + VAD）
+  const mic = useMic()
 
   const chat = useResolveChat({
     endpoint: 'http://127.0.0.1:8787',
@@ -265,7 +269,29 @@ export default function App() {
                   ) : (
                     <button className="chat-send" onClick={handleSend} disabled={!input.trim()}>发送</button>
                   )}
+                  <button
+                    className={`mic-btn ${mic.active ? 'active' : ''}`}
+                    onClick={() => mic.active ? mic.stop() : mic.start({ threshold: 0.02 })}
+                    title={mic.active ? '停止麦克风' : '开启麦克风'}
+                  >
+                    {mic.active ? '🎙️' : '🎤'}
+                  </button>
                 </div>
+                {/* 麦克风音量 + VAD 状态 */}
+                {mic.active && (
+                  <div className="mic-status">
+                    <div className="mic-volume-bar">
+                      <div
+                        className="mic-volume-fill"
+                        style={{ width: `${Math.min(100, mic.volume * 500)}%` }}
+                      />
+                    </div>
+                    <span className={`mic-vad ${mic.isSpeaking ? 'speaking' : ''}`}>
+                      {mic.isSpeaking ? '● 说话中' : '○ 静音'}
+                    </span>
+                  </div>
+                )}
+                {mic.error && <div className="chat-error">🎤 {mic.error}</div>}
                 <div className="chat-actions">
                   <button className="chat-clear" onClick={() => { chat.clear(); window.speechSynthesis?.cancel() }}>清空对话</button>
                   <button

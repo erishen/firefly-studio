@@ -1420,3 +1420,64 @@ canvas {
   border-color: #999;
   color: #999;
 }
+
+/* 麦克风按钮 */
+.mic-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.mic-btn:hover {
+  border-color: #6c5ce7;
+}
+.mic-btn.active {
+  background: #e74c3c;
+  border-color: #e74c3c;
+  animation: mic-pulse 1s infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0); }
+}
+
+/* 麦克风状态 */
+.mic-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+.mic-volume-bar {
+  flex: 1;
+  height: 6px;
+  background: #ddd;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.mic-volume-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #27ae60, #f39c12, #e74c3c);
+  border-radius: 3px;
+  transition: width 0.05s;
+}
+.mic-vad {
+  font-size: 11px;
+  color: #999;
+  white-space: nowrap;
+}
+.mic-vad.speaking {
+  color: #e74c3c;
+  font-weight: 600;
+}

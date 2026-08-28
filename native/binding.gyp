@@ -5,7 +5,8 @@
       "sources": [
         "src/addon.cc",
         "src/audio_engine.cc",
-        "src/asr_client.cc"
+        "src/asr_client.cc",
+        "src/mic_capture.cc"
       ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")"
@@ -37,7 +38,12 @@
           "OS=='mac'",
           {
             "xcode_settings": {
-              "GCC_ENABLE_CPP_EXCEPTIONS": "YES"
+              "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
+              "OTHER_LDFLAGS": [
+                "-framework", "CoreAudio",
+                "-framework", "AudioToolbox",
+                "-framework", "CoreFoundation"
+              ]
             }
           }
         ]

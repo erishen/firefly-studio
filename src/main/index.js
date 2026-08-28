@@ -133,6 +133,36 @@ function registerIpc() {
   ipcMain.handle('asr:destroy', (_e, handle) => {
     return loadNative().asr.destroy(handle)
   })
+
+  // 麦克风采集（CoreAudio + VAD）
+  ipcMain.handle('mic:start', (e, sampleRate, frameMs, threshold) => {
+    const win = e.sender
+    const mod = loadNative()
+    const handle = mod.mic.start(
+      sampleRate || 16000,
+      frameMs || 20,
+      (frame) => {
+        // 音频线程回调，通过 webContents 发给渲染进程
+        win.send('mic:frame', { rms: frame.rms, isSpeech: frame.isSpeech })
+      },
+      (err) => {
+        win.send('mic:error', err)
+      }
+    )
+    if (threshold !== undefined) {
+      mod.mic.setThreshold(handle, threshold)
+    }
+    return handle
+  })
+  ipcMain.handle('mic:stop', (_e, handle) => {
+    return loadNative().mic.stop(handle)
+  })
+  ipcMain.handle('mic:setThreshold', (_e, handle, t) => {
+    return loadNative().mic.setThreshold(handle, t)
+  })
+  ipcMain.handle('mic:destroy', (_e, handle) => {
+    return loadNative().mic.destroy(handle)
+  })
 }
 
 app.whenReady().then(() => {

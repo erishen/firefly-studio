@@ -26,6 +26,22 @@ const api = {
     finalize: (handle) => ipcRenderer.invoke('asr:finalize', handle),
     destroy: (handle) => ipcRenderer.invoke('asr:destroy', handle),
   },
+
+  // 麦克风采集（CoreAudio + VAD）
+  mic: {
+    start: (sampleRate, frameMs, threshold) =>
+      ipcRenderer.invoke('mic:start', sampleRate, frameMs, threshold),
+    stop: (handle) => ipcRenderer.invoke('mic:stop', handle),
+    setThreshold: (handle, t) =>
+      ipcRenderer.invoke('mic:setThreshold', handle, t),
+    destroy: (handle) => ipcRenderer.invoke('mic:destroy', handle),
+    onFrame: (cb) => ipcRenderer.on('mic:frame', (_e, data) => cb(data)),
+    onError: (cb) => ipcRenderer.on('mic:error', (_e, msg) => cb(msg)),
+    removeListeners: () => {
+      ipcRenderer.removeAllListeners('mic:frame')
+      ipcRenderer.removeAllListeners('mic:error')
+    },
+  },
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)
