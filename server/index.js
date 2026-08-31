@@ -5,7 +5,7 @@
 import { createServer } from 'node:http'
 import { streamChat, LLM_CONFIG } from './llm.js'
 
-const DEFAULT_PORT = 8787
+const DEFAULT_PORT = 8788
 const DEFAULT_HOST = '127.0.0.1'
 
 export function startServer({ port = DEFAULT_PORT, host = DEFAULT_HOST } = {}) {
@@ -78,21 +78,28 @@ export function startServer({ port = DEFAULT_PORT, host = DEFAULT_HOST } = {}) {
 
         try {
           let answer = ''
+          let deltaCount = 0
           for await (const delta of streamChat(messages, {
             model: parsed.model,
             systemPrompt: parsed.systemPrompt,
             signal: ac.signal,
           })) {
             answer += delta
+            deltaCount++
             send('delta', { text: delta })
           }
+          console.log('[SSE] stream finished, deltaCount:', deltaCount, 'answer length:', answer.length)
           send('done', { answer })
+          console.log('[SSE] done event sent')
         } catch (err) {
+          console.error('[SSE] stream error:', err.message)
           if (err.name !== 'AbortError') {
             send('error', { message: err.message || String(err) })
           }
         } finally {
+          console.log('[SSE] finally, ending response, writableEnded:', res.writableEnded)
           if (!res.writableEnded) res.end()
+          console.log('[SSE] response ended')
         }
       })
       return

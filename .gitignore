@@ -2,6 +2,12 @@
 node_modules/
 out/
 
+# Python 虚拟环境（使用 uv 管理，不提交）
+.venv/
+.venv-tts/
+__pycache__/
+*.pyc
+
 # Native build
 native/build/
 native/.node-gyp/
@@ -36,3 +42,37 @@ src/renderer/public/*.vrm
 # Whisper.cpp 第三方源码 + 模型（不提交，构建时自动克隆/下载）
 native/whisper.cpp/
 native/models/
+
+# Piper TTS 二进制 + 语音模型（大文件，不提交，首次运行需下载）
+native/piper/piper
+native/piper/models/
+
+# edge-tts 实现文件（可选功能，GPL-3.0 许可证，不提交到 GitHub，用户需自行准备）
+# 如需使用 edge-tts，请在 .env 中设置 ENABLE_EDGE_TTS=true，并自行准备该文件
+src/main/tts-edge-tts.js
+
+# g2pW 字音转换模型（大文件，不提交，首次运行需下载）
+g2pW/g2pw.onnx
+
+# 第三方源码中的大文件（模型、数据、压缩包）
+native/piper-cpp/etc/test_voice.onnx
+native/rnnoise/models/*.pth
+native/rnnoise/*.tar.gz
+native/rnnoise/src/rnnoise_data.c
+native/rnnoise/src/rnnoise_data_little.c
+
+# 示例音频文件（大文件，不提交）
+src/renderer/public/audio/*.mp3
+src/renderer/public/audio/*.wav
+src/renderer/public/audio/*.ogg
+
+# RVC 数字人翻唱相关（大文件 + 第三方代码 + 虚拟环境，不提交）
+native/rvc/models/
+native/rvc/rvc_official/
+native/rvc/official-rvc/
+native/rvc/.venv/
+native/rvc/test_*.wav
+native/rvc/*.wav
+native/rvc/__pycache__/
+native/rvc/**/__pycache__/
+native/rvc/**/*.pyc

@@ -33,6 +33,11 @@ unzip -q "$ZIP" -d "$TMP_DIR"
 cp -R "$TMP_DIR"/. "$DIST_DIR"/
 rm -rf "$TMP_DIR"
 
+# 2.1 移除隔离属性并重新签名（避免 macOS XProtect 误报恶意软件）
+echo "==> 移除隔离属性并重新签名 ..."
+xattr -cr "$DIST_DIR/Electron.app" 2>/dev/null || true
+codesign --force --deep --sign - "$DIST_DIR/Electron.app" 2>/dev/null || true
+
 # 3. 写 path.txt
 printf 'Electron.app/Contents/MacOS/Electron' > "node_modules/electron/path.txt"
 

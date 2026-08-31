@@ -18,7 +18,7 @@ import { useBlink } from '../hooks/useBlink'
 //   测试头像      public/test.vrm             —— 用户导入的 VRM（可能为 VRM0.0，three-vrm 会自动归一化表情名）
 //   萤火女仆      /api/model（生产，firefly 服务端函数代理换限时签名 URL）—— 用户导入 VRM；
 //               其 VRM 许可为 OnlyAuthor + redistribution=disallow（第三方 VRoid 创作，仅作者可商用/再分发），
-//               故经 api.erishen.cn 签名校验获取，主密钥在服务端、不开放匿名裸链（见 Stage 内 FIREFLY_VRM_* ）。
+//               故经配置的签名服务校验获取，主密钥在服务端、不开放匿名裸链（见 Stage 内 FIREFLY_VRM_* ）。
 // 加载失败时都会自动回退到内置程序化角色，页面不会白屏。
 const RPM_AVATAR_URL = '/avatar.glb'
 const AVATURN_AVATAR_URL = '/avatar-avaturn.glb'
@@ -27,18 +27,22 @@ const VRM_AVATAR_URL = '/avatar.vrm'
 const TEST_VRM_URL = '/test.vrm'
 // 萤火女仆：
 //   开发环境直接用本地 public/ 下的模型（无需令牌、离线可用）；
-//   生产环境由浏览器经 CORS 直连 api.erishen.cn 拉取 VRM（来源受信即放行，
+//   生产环境由浏览器经 CORS 直连配置的 VRM URL 拉取模型（来源受信即放行，
 //   无需经 Vercel 服务端函数中转——实测 Vercel hkg1 → 国内 VPS 的 server 出网
 //   会被拦/超时，导致 /api/model 返回 504、无痕模式回退默认角色）。
 //   直连 URL 稳定（不含 5 分钟签名轮换），更利于浏览器 Cache API 命中秒开。
 //   该 VRM 许可 redistribution=disallow，服务端按 Origin 来源受信白名单放行，
 //   请勿在其他站点嵌入或匿名公开分发裸链。
+//   生产环境 URL 通过 .env 中的 FIREFLY_VRM_PROD_URL 配置，避免硬编码个人域名。
 const FIREFLY_VRM_DEV_URL = '/fireflyMaid.vrm'
-const FIREFLY_VRM_PROD_URL = '/fireflyMaid.vrm'
+const FIREFLY_VRM_PROD_URL = import.meta.env.VITE_FIREFLY_VRM_PROD_URL || '/fireflyMaid.vrm'
 
 // 场景：灯光 / 粒子 / 地面 / 交互状态
 // speakingRef、bubble、onClick、modelSource 由 App 统一持有
-export default function Stage({ speakingRef, bubble, onClick, modelSource = 'avaturn' }) {
+// audioEnergy: 实时音频能量（0~1），用于口型同步
+// expression: 当前表情（neutral/happy/angry/sad/surprised/relaxed）
+// gesture: 当前手势（idle/wave/nod/shake/thinking/heart）
+export default function Stage({ speakingRef, bubble, onClick, modelSource = 'avaturn', audioEnergy = 0, expression = 'neutral', gesture = 'idle' }) {
   const blinkRef = useRef(false)
 
   // 眨眼调度统一在这里跑一次（程序化角色与 RPM 模型共用 blinkRef）
@@ -102,6 +106,9 @@ export default function Stage({ speakingRef, bubble, onClick, modelSource = 'ava
                   speakingRef={speakingRef}
                   blinkRef={blinkRef}
                   onClick={onClick}
+                  audioEnergy={audioEnergy}
+                  expression={expression}
+                  gesture={gesture}
                 />
               ) : avatarUrl ? (
                 <AvatarModel

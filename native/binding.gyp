@@ -8,6 +8,13 @@
         "src/asr_client.cc",
         "src/mic_capture.cc",
         "src/asr_whisper.cc",
+        "src/rnnoise_denoiser.cc",
+        "src/coreaudio_player.cc",
+        "src/pcm_processor.cc",
+        "src/audio_ring_buffer.cc",
+        "src/audio_pipeline.cc",
+        "src/piper_tts.cc",
+        "src/audio_devices.cc",
         "whisper.cpp/src/whisper.cpp",
         "whisper.cpp/ggml/src/ggml.c",
         "whisper.cpp/ggml/src/ggml-alloc.c",
@@ -16,10 +23,18 @@
         "whisper.cpp/ggml/src/ggml-backend-reg.cpp",
         "whisper.cpp/ggml/src/ggml-threading.cpp",
         "src/ggml-cpu-c.c",
-        "whisper.cpp/ggml/src/ggml-cpu/ggml-cpu.cpp",
         "whisper.cpp/ggml/src/ggml-cpu/ggml-cpu-quants.c",
         "whisper.cpp/ggml/src/ggml-cpu/ggml-cpu-traits.cpp",
-        "whisper.cpp/ggml/src/ggml-cpu/cpu-feats-x86.cpp"
+        "whisper.cpp/ggml/src/ggml-cpu/cpu-feats-x86.cpp",
+        "rnnoise/src/denoise.c",
+        "rnnoise/src/nnet.c",
+        "rnnoise/src/rnn.c",
+        "rnnoise/src/celt_lpc.c",
+        "rnnoise/src/kiss_fft.c",
+        "rnnoise/src/pitch.c",
+        "rnnoise/src/rnnoise_tables.c",
+        "rnnoise/src/rnnoise_data.c",
+        "rnnoise/src/parse_lpcnet_weights.c"
       ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")",
@@ -27,7 +42,9 @@
         "whisper.cpp/ggml/include",
         "whisper.cpp/ggml/src",
         "whisper.cpp/ggml/src/ggml-cpu",
-        "whisper.cpp/src"
+        "whisper.cpp/src",
+        "rnnoise/include",
+        "rnnoise/src"
       ],
       "cflags": [
         "-std=c11",

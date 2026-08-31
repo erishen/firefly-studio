@@ -5,7 +5,7 @@
  */
 import { startServer } from './index.js'
 
-const port = parseInt(process.env.SERVER_PORT || '8787', 10)
+const port = parseInt(process.env.SERVER_PORT || '8788', 10)
 const host = process.env.SERVER_HOST || '127.0.0.1'
 
 const server = startServer({ port, host })

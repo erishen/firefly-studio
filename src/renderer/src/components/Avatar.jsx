@@ -17,9 +17,18 @@ export default function Avatar({ speakingRef, onClick, blinkRef }) {
     [],
   )
 
-  useFrame(() => {
-    // 嘴巴开合
-    const target = speakingRef.current ? 1 : 0
+  useFrame((state) => {
+    // 嘴巴开合：多层正弦波模拟音频能量变化，让口型更自然
+    const t = state.clock.elapsedTime
+    let target = 0
+    if (speakingRef.current) {
+      // 模拟音频能量：多层正弦波叠加
+      const energy = 0.5
+        + 0.3 * Math.sin(t * 4.0)          // 基频，模拟音节节奏
+        + 0.15 * Math.sin(t * 7.3 + 1.2)  // 谐波，模拟音高变化
+        + 0.05 * Math.sin(t * 11.7 + 2.5) // 高频扰动
+      target = Math.max(0.05, Math.min(0.95, energy))
+    }
     mouthRef.current += (target - mouthRef.current) * 0.3
   })
 

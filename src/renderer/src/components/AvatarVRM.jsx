@@ -124,8 +124,8 @@ async function loadModelBytes(url, headers, onProgress) {
 //
 // 说明：VRM 默认面向 -Z，组件内已把 scene 旋转 180° 使其面向相机（+Z）。
 
-export default function AvatarVRM({ url, token, speakingRef, blinkRef, onClick }) {
-  
+export default function AvatarVRM({ url, token, speakingRef, blinkRef, onClick, audioEnergy = 0, expression = 'neutral', gesture = 'idle' }) {
+
   const [vrm, setVrm] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -142,6 +142,45 @@ export default function AvatarVRM({ url, token, speakingRef, blinkRef, onClick }
   const blinkIdxRef = useRef(null)
   const useExprMouthRef = useRef(false)
   const useExprBlinkRef = useRef(false)
+
+  // —— 表情系统 ——
+  // 支持的表情：neutral（中性）、happy（开心）、angry（生气）、sad（悲伤）、surprised（惊讶）、relaxed（放松）
+  const expressionRef = useRef(expression)
+  const targetExpressionRef = useRef(expression)
+  const expressionWeightRef = useRef({
+    happy: 0, angry: 0, sad: 0, surprised: 0, relaxed: 0
+  })
+  const supportedExpressionsRef = useRef({})
+
+  // 同步 expression prop 到 ref
+  useEffect(() => {
+    targetExpressionRef.current = expression
+  }, [expression])
+
+  // —— 手势/动作系统 ——
+  // 支持的手势：idle（空闲）、wave（挥手）、nod（点头）、shake（摇头）、thinking（思考）、heart（比心）
+  const targetGestureRef = useRef(gesture)
+  const gestureProgressRef = useRef(0) // 手势进度 0~1
+  const gestureTimeRef = useRef(0) // 手势时间（用于循环动画）
+  const gestureBonesRef = useRef({
+    head: null,
+    neck: null,
+    leftUpperArm: null,
+    leftLowerArm: null,
+    leftHand: null,
+    rightUpperArm: null,
+    rightLowerArm: null,
+    rightHand: null,
+  })
+  const baseRotationsRef = useRef({}) // 骨骼初始旋转
+
+  // 同步 gesture prop 到 ref
+  useEffect(() => {
+    if (targetGestureRef.current !== gesture) {
+      targetGestureRef.current = gesture
+      gestureProgressRef.current = 0 // 新手势从头开始
+    }
+  }, [gesture])
 
   // 异步加载 VRM（GLTFLoader + VRMLoaderPlugin），带进度与浏览器缓存
   useEffect(() => {
@@ -191,6 +230,23 @@ export default function AvatarVRM({ url, token, speakingRef, blinkRef, onClick }
         const arm = collectArmBones(v)
         armBonesRef.current = arm
 
+        // —— 收集手势相关骨骼 ——
+        const humanoid = v.humanoid
+        const gestureBones = {}
+        const boneNames = ['head', 'neck', 'leftUpperArm', 'leftLowerArm', 'leftHand', 'rightUpperArm', 'rightLowerArm', 'rightHand']
+        boneNames.forEach((name) => {
+          const node = humanoid.getNormalizedBoneNode(name)
+          if (node) {
+            gestureBones[name] = node
+            // 记录初始旋转（世界坐标）
+            const wq = new THREE.Quaternion()
+            node.getWorldQuaternion(wq)
+            baseRotationsRef.current[name] = wq.clone()
+          }
+        })
+        gestureBonesRef.current = gestureBones
+        console.log('[AvatarVRM] 手势骨骼:', Object.keys(gestureBones))
+
         // —— 口型/眨眼驱动方式探测 ——
         // 某些 VRM0.0 导出文件的 blendShapeMaster.blendShapeGroups 为空（表情组数=0），
         // three-vrm 的 expressionManager 因此没有任何表情；但 mesh 底层仍带 morph target
@@ -232,6 +288,15 @@ export default function AvatarVRM({ url, token, speakingRef, blinkRef, onClick }
         useExprMouthRef.current = hasExpr('aa') || hasExpr('ih')
         useExprBlinkRef.current = hasExpr('blink')
 
+        // —— 检测支持的表情 ——
+        const exprList = ['happy', 'angry', 'sad', 'surprised', 'relaxed']
+        const supported = {}
+        exprList.forEach((name) => {
+          supported[name] = hasExpr(name)
+        })
+        supportedExpressionsRef.current = supported
+        console.log('[AvatarVRM] 支持的表情:', supported)
+
         setVrm(v)
         setLoading(false)
         
@@ -269,11 +334,23 @@ export default function AvatarVRM({ url, token, speakingRef, blinkRef, onClick }
     const bob = speakingRef.current ? Math.sin(state.clock.elapsedTime * 6) * 0.03 : 0
     const head = headRef.current
     if (head) {
-      if (!baseHead.current) baseHead.current = { x: head.rotation.x, y: head.rotation.y }
+      // 记录初始旋转（包括 z 轴，防止模型头部初始 z 旋转导致头倒着）
+      if (!baseHead.current) {
+        let initialZ = head.rotation.z
+        // 如果初始 z 旋转接近 π（180 度），说明头是倒着的，校正为 0
+        if (Math.abs(Math.abs(initialZ) - Math.PI) < 0.1) {
+          console.warn('[AvatarVRM] 检测到头部初始 z 旋转接近 180°，已校正为 0°')
+          initialZ = 0
+          head.rotation.z = 0
+        }
+        baseHead.current = { x: head.rotation.x, y: head.rotation.y, z: initialZ }
+      }
       const tx = state.pointer.x * 0.35
       const ty = -state.pointer.y * 0.25
       head.rotation.y += (baseHead.current.y + tx - head.rotation.y) * 0.1
       head.rotation.x += (baseHead.current.x + ty + bob - head.rotation.x) * 0.1
+      // 保持 z 轴旋转为初始值，防止头倒着
+      head.rotation.z += (baseHead.current.z - head.rotation.z) * 0.1
     }
     eyeRefs.current.forEach((eye, i) => {
       if (!eye) return
@@ -284,23 +361,42 @@ export default function AvatarVRM({ url, token, speakingRef, blinkRef, onClick }
       eye.rotation.x += (baseEyes.current[i].x + ty - eye.rotation.x) * 0.15
     })
 
-    // 说话口型：优先 expressionManager（VRM1.0 / 规范 VRM0.0）；否则回退直接驱动 morph
-    // （本模型 blendShapeMaster 为空 → expressionManager 无表情，走 mesh.morphTargetInfluences 的 あ/い/う/え/お）
+    // 说话口型：优先使用真实音频能量（audioEnergy），回退到模拟正弦波
+    // 真实音频能量来自 TTS 播放时的 PCM 能量曲线，口型与语音精确同步
     const t = state.clock.elapsedTime
+    let mouthOpen = 0
+    if (speakingRef.current) {
+      if (audioEnergy > 0.001) {
+        // 使用真实音频能量：将 RMS 能量映射到口型大小（0~0.95）
+        // 音频能量通常在 0.01~0.3 之间，使用平方根映射让低能量更明显
+        mouthOpen = Math.min(0.95, Math.sqrt(audioEnergy) * 2.5)
+      } else {
+        // 回退：多层正弦波模拟音频能量变化
+        const energy = 0.5
+          + 0.3 * Math.sin(t * 4.0)
+          + 0.15 * Math.sin(t * 7.3 + 1.2)
+          + 0.05 * Math.sin(t * 11.7 + 2.5)
+        mouthOpen = Math.max(0.1, Math.min(0.95, energy))
+      }
+    }
+
+    // 元音切换：根据口型大小和时间切换元音
+    const vowelSpeed = 5 + mouthOpen * 6
+    const vowels = ['a', 'i', 'u', 'e', 'o']
+    const vowelIdx = Math.floor(t * vowelSpeed) % 5
+    const activeVowel = vowels[vowelIdx]
+
     if (useExprMouthRef.current && vrm.expressionManager) {
-      const mouthNames = ['aa', 'ih', 'ou', 'ee', 'oh', 'a']
-      const activeIdx = speakingRef.current ? Math.floor(t * 7) % mouthNames.length : -1
+      const mouthNames = ['aa', 'ih', 'ou', 'ee', 'oh']
       mouthNames.forEach((n, i) => {
-        vrm.expressionManager.setValue(n, i === activeIdx ? 0.7 : 0)
+        vrm.expressionManager.setValue(n, i === vowelIdx ? mouthOpen : 0)
       })
     } else if (mouthMeshRef.current) {
       const infl = mouthMeshRef.current.morphTargetInfluences
       const mi = mouthIdxRef.current
       for (const k of ['a', 'i', 'u', 'e', 'o']) if (mi[k] != null) infl[mi[k]] = 0
-      if (speakingRef.current) {
-        const vowels = ['a', 'i', 'u', 'e', 'o']
-        const v = vowels[Math.floor(t * 7) % 5]
-        if (mi[v] != null) infl[mi[v]] = 0.7
+      if (speakingRef.current && mi[activeVowel] != null) {
+        infl[mi[activeVowel]] = mouthOpen
       }
     }
 
@@ -312,6 +408,132 @@ export default function AvatarVRM({ url, token, speakingRef, blinkRef, onClick }
       vrm.expressionManager.setValue('blinkRight', b)
     } else if (blinkMeshRef.current && blinkIdxRef.current != null) {
       blinkMeshRef.current.morphTargetInfluences[blinkIdxRef.current] = b
+    }
+
+    // —— 表情系统驱动 ——
+    // 目标表情权重：neutral 时所有表情权重为 0
+    const targetExpr = targetExpressionRef.current
+    const targetWeights = {
+      happy: targetExpr === 'happy' ? 1 : 0,
+      angry: targetExpr === 'angry' ? 1 : 0,
+      sad: targetExpr === 'sad' ? 1 : 0,
+      surprised: targetExpr === 'surprised' ? 1 : 0,
+      relaxed: targetExpr === 'relaxed' ? 1 : 0,
+    }
+
+    // 平滑过渡（每帧向目标权重靠近，速度约 5/秒）
+    const exprSpeed = Math.min(1, delta * 5)
+    const weights = expressionWeightRef.current
+    const supported = supportedExpressionsRef.current
+
+    Object.keys(targetWeights).forEach((name) => {
+      if (!supported[name]) return  // 模型不支持的表情跳过
+      const current = weights[name] || 0
+      const target = targetWeights[name]
+      weights[name] = current + (target - current) * exprSpeed
+      // 设置表情权重
+      if (vrm.expressionManager) {
+        vrm.expressionManager.setValue(name, weights[name])
+      }
+    })
+
+    // —— 手势/动作系统驱动 ——
+    const targetGesture = targetGestureRef.current
+    const bones = gestureBonesRef.current
+    const baseRots = baseRotationsRef.current
+
+    if (targetGesture !== 'idle' && bones.head) {
+      // 更新手势时间（用于循环动画）
+      gestureTimeRef.current += delta
+      const t = gestureTimeRef.current
+
+      // 手势进度（渐入渐出）
+      const gestureSpeed = Math.min(1, delta * 3)
+      gestureProgressRef.current = Math.min(1, gestureProgressRef.current + gestureSpeed)
+      const p = gestureProgressRef.current
+
+      // 辅助函数：设置骨骼旋转（相对于初始旋转的增量）
+      const setBoneRot = (name, axis, angle) => {
+        const node = bones[name]
+        const base = baseRots[name]
+        if (!node || !base) return
+        const deltaQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(...axis), angle * p)
+        const newWorld = deltaQ.multiply(base.clone())
+        // 转换为本地旋转
+        if (node.parent) {
+          const parentWQ = new THREE.Quaternion()
+          node.parent.getWorldQuaternion(parentWQ)
+          const newLocal = parentWQ.clone().invert().multiply(newWorld)
+          node.quaternion.copy(newLocal)
+        }
+      }
+
+      // 根据手势类型应用骨骼旋转
+      switch (targetGesture) {
+        case 'wave': {
+          // 挥手：右手上举，前臂左右摆动
+          if (bones.rightUpperArm) {
+            setBoneRot('rightUpperArm', [0, 0, 1], -2.0) // 上举
+            setBoneRot('rightUpperArm', [1, 0, 0], -0.3)  // 略向前
+          }
+          if (bones.rightLowerArm) {
+            const waveAngle = Math.sin(t * 5) * 0.5 // 左右摆动
+            setBoneRot('rightLowerArm', [0, 1, 0], waveAngle)
+          }
+          break
+        }
+        case 'nod': {
+          // 点头：头部上下点头
+          const nodAngle = Math.sin(t * 4) * 0.25
+          setBoneRot('head', [1, 0, 0], nodAngle)
+          break
+        }
+        case 'shake': {
+          // 摇头：头部左右摇头
+          const shakeAngle = Math.sin(t * 4) * 0.3
+          setBoneRot('head', [0, 1, 0], shakeAngle)
+          break
+        }
+        case 'thinking': {
+          // 思考：右手托下巴，头部微倾
+          if (bones.rightUpperArm) {
+            setBoneRot('rightUpperArm', [0, 0, 1], -1.5) // 上举
+            setBoneRot('rightUpperArm', [1, 0, 0], -0.5)  // 向前
+          }
+          if (bones.rightLowerArm) {
+            setBoneRot('rightLowerArm', [1, 0, 0], -1.2) // 弯曲
+          }
+          setBoneRot('head', [0, 0, 1], 0.15) // 头部微倾
+          setBoneRot('head', [1, 0, 0], -0.1) // 略低头
+          break
+        }
+        case 'heart': {
+          // 比心：双手在胸前比心
+          if (bones.leftUpperArm) {
+            setBoneRot('leftUpperArm', [0, 0, 1], 1.2)  // 上举
+            setBoneRot('leftUpperArm', [1, 0, 0], -0.8)  // 向前
+          }
+          if (bones.rightUpperArm) {
+            setBoneRot('rightUpperArm', [0, 0, 1], -1.2) // 上举
+            setBoneRot('rightUpperArm', [1, 0, 0], -0.8) // 向前
+          }
+          if (bones.leftLowerArm) {
+            setBoneRot('leftLowerArm', [1, 0, 0], -1.5)  // 弯曲
+            setBoneRot('leftLowerArm', [0, 1, 0], 0.3)   // 向内
+          }
+          if (bones.rightLowerArm) {
+            setBoneRot('rightLowerArm', [1, 0, 0], -1.5) // 弯曲
+            setBoneRot('rightLowerArm', [0, 1, 0], -0.3) // 向内
+          }
+          break
+        }
+      }
+    } else if (targetGesture === 'idle' && gestureProgressRef.current > 0) {
+      // 恢复空闲：手势进度渐出
+      const gestureSpeed = Math.min(1, delta * 3)
+      gestureProgressRef.current = Math.max(0, gestureProgressRef.current - gestureSpeed)
+      // 这里可以添加恢复逻辑，但因为每帧都从基础旋转开始计算，所以不需要显式恢复
+      // 当 gestureProgressRef.current 为 0 时，所有手势旋转都会被乘以 0，相当于恢复初始状态
     }
   })
 
@@ -335,7 +557,8 @@ export default function AvatarVRM({ url, token, speakingRef, blinkRef, onClick }
           }}
         >
           {/* VRM 默认面向 -Z，旋转 180° 使其面向相机 */}
-          <primitive object={vrm.scene} rotation-y={Math.PI} />
+          {/* 如果模型头倒着，可以调整 rotation-x 或 rotation-z 来校正 */}
+          <primitive object={vrm.scene} rotation-y={Math.PI} rotation-x={0} rotation-z={0} />
         </group>
       )}
       {loading && (

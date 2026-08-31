@@ -9,11 +9,12 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "prepare:electron": "bash scripts/prepare-electron.sh",
+    "install:electron": "bash scripts/install-electron.sh",
     "native:build": "bash scripts/build-native.sh debug",
     "native:release": "bash scripts/build-native.sh release",
     "native:clean": "node-gyp clean --directory=native",
     "server": "node server/standalone.js",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps && bash $HOME/.electron-dist/link-electron.sh || true"
   },
   "dependencies": {
     "@pixiv/three-vrm": "^3.5.5",
@@ -21,11 +22,13 @@
     "@react-three/fiber": "^8.18.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "three": "^0.169.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.2",
-    "electron": "^31.7.7",
+    "electron": "^37.10.3",
     "electron-builder": "^25.1.8",
     "electron-rebuild": "^3.2.9",
     "electron-vite": "^2.3.0",

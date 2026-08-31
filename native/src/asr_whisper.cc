@@ -3,6 +3,7 @@
 #include <whisper.h>
 
 #include <cstring>
+#include <iostream>
 #include <sstream>
 
 namespace firefly {
@@ -22,10 +23,19 @@ bool AsrWhisper::LoadModel(const std::string& model_path) {
     ctx_ = nullptr;
   }
 
-  whisper_context_params cparams = whisper_context_default_params();
-  cparams.use_gpu = false;  // 纯 CPU，避免 GPU 依赖问题
-  ctx_ = whisper_init_from_file_with_params(model_path.c_str(), cparams);
-  return ctx_ != nullptr;
+  std::cout << "[Whisper] Loading model: " << model_path << std::endl;
+
+  // 使用旧版 API，避免新版后端系统（ggml-backend）的注册问题
+  // 新版 whisper_init_from_file_with_params 在某些编译配置下会因 devices=0 崩溃
+  ctx_ = whisper_init_from_file(model_path.c_str());
+
+  if (!ctx_) {
+    std::cerr << "[Whisper] Failed to load model: " << model_path << std::endl;
+    return false;
+  }
+
+  std::cout << "[Whisper] Model loaded successfully" << std::endl;
+  return true;
 }
 
 std::string AsrWhisper::Transcribe(const float* pcm, size_t len,

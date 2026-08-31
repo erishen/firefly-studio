@@ -26,6 +26,10 @@ export default defineConfig({
         '@': resolve('src/renderer/src')
       }
     },
+    server: {
+      port: 5180,
+      strictPort: true
+    },
     build: {
       outDir: 'out/renderer'
     }

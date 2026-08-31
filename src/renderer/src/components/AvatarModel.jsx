@@ -127,9 +127,17 @@ export default function AvatarModel({ url, speakingRef, blinkRef, onClick, hidde
       eye.rotation.x += (baseEyes.current[i].x + ty - eye.rotation.x) * 0.15
     })
 
-    // 说话：驱动 mouthOpen 类 morph。带轻微正弦起伏，像在讲话而非干张嘴
+    // 说话：驱动 mouthOpen 类 morph。多层正弦波模拟音频能量变化，让口型更自然
     const t = state.clock.elapsedTime
-    const mTarget = speakingRef.current ? 0.4 + 0.35 * Math.abs(Math.sin(t * 9)) : 0
+    let mTarget = 0
+    if (speakingRef.current) {
+      // 模拟音频能量：多层正弦波叠加，模拟说话时的音量变化
+      const energy = 0.5
+        + 0.3 * Math.sin(t * 4.0)          // 基频，模拟音节节奏
+        + 0.15 * Math.sin(t * 7.3 + 1.2)  // 谐波，模拟音高变化
+        + 0.05 * Math.sin(t * 11.7 + 2.5) // 高频扰动
+      mTarget = Math.max(0.05, Math.min(0.85, energy * 0.85)) // 口型大小 0.05~0.85
+    }
     mouthMeshes.current.forEach((m) => {
       const idx = findMorph(m, MOUTH)
       if (idx >= 0) {

@@ -41,6 +41,63 @@ export const LLM_CONFIG = {
 }
 
 /**
+ * 判断是否是可重试的 LLM 错误
+ */
+function isRetryableLlmError(error, resp) {
+  // 网络错误
+  if (error && (error.name === 'TypeError' || error.message?.includes('fetch') || error.message?.includes('network'))) {
+    return true
+  }
+  // HTTP 状态码：5xx、429（限流）可重试
+  if (resp && (resp.status >= 500 || resp.status === 429)) {
+    return true
+  }
+  return false
+}
+
+/**
+ * 带重试的 fetch 调用（连接阶段重试，流式输出过程中不重试）
+ */
+async function fetchWithRetry(url, options, maxRetries = 3, baseDelay = 1000) {
+  let lastError = null
+  let lastResp = null
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        console.log(`[LLM] 第 ${attempt} 次重试连接...`)
+      }
+      const resp = await fetch(url, options)
+      lastResp = resp
+
+      if (!resp.ok && isRetryableLlmError(null, resp) && attempt < maxRetries) {
+        const delay = Math.min(baseDelay * Math.pow(2, attempt), 5000)
+        console.warn(`[LLM] HTTP ${resp.status}，${delay}ms 后重试...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        continue
+      }
+      return resp
+    } catch (error) {
+      lastError = error
+      if (isRetryableLlmError(error, null) && attempt < maxRetries) {
+        const delay = Math.min(baseDelay * Math.pow(2, attempt), 5000)
+        console.warn(`[LLM] 连接失败: ${error.message}，${delay}ms 后重试...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        continue
+      }
+      throw error
+    }
+  }
+
+  // 所有重试都失败
+  if (lastResp) {
+    const text = await lastResp.text().catch(() => '')
+    throw new Error(`LLM HTTP ${lastResp.status}: ${text.slice(0, 200)}`)
+  }
+  throw lastError || new Error('LLM request failed')
+}
+
+/**
  * 流式调用 LLM，返回 async generator，yield 文本增量。
  */
 export async function* streamChat(messages, options = {}) {
@@ -52,6 +109,7 @@ export async function* streamChat(messages, options = {}) {
     maxTokens = LLM_CONFIG.maxTokens,
     systemPrompt,
     signal,
+    retries = 3,
   } = options
 
   if (!apiKey) {
@@ -62,7 +120,7 @@ export async function* streamChat(messages, options = {}) {
     ? [{ role: 'system', content: systemPrompt }, ...messages]
     : messages
 
-  const resp = await fetch(`${baseURL}/chat/completions`, {
+  const fetchOptions = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -76,7 +134,10 @@ export async function* streamChat(messages, options = {}) {
       stream: true,
     }),
     signal,
-  })
+  }
+
+  // 连接阶段带重试
+  const resp = await fetchWithRetry(`${baseURL}/chat/completions`, fetchOptions, retries)
 
   if (!resp.ok) {
     const text = await resp.text().catch(() => '')

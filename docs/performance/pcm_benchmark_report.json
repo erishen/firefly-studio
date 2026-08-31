@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-08-29T08:41:43.148Z",
+  "config": {
+    "sampleRate": 22050,
+    "durationMs": 1000,
+    "iterations": 1000
+  },
+  "results": [
+    {
+      "test": "淡入淡出",
+      "cppAvgMs": 0.0257,
+      "jsAvgMs": 0.0263,
+      "speedup": 1
+    },
+    {
+      "test": "音量调节",
+      "cppAvgMs": 0.0166,
+      "jsAvgMs": 0.3095,
+      "speedup": 18.6
+    },
+    {
+      "test": "合并分段",
+      "cppAvgMs": 0.0446,
+      "jsAvgMs": 0.0071,
+      "speedup": 0.2
+    },
+    {
+      "test": "WAV 构造",
+      "cppAvgMs": 0.0033,
+      "jsAvgMs": 0.0045,
+      "speedup": 1.4
+    },
+    {
+      "test": "计算时长",
+      "cppAvgMs": 0.0001,
+      "jsAvgMs": 0.0001,
+      "speedup": 1
+    },
+    {
+      "test": "计算 RMS",
+      "cppAvgMs": 0.0182,
+      "jsAvgMs": 0.1738,
+      "speedup": 9.5
+    },
+    {
+      "test": "完整流水线",
+      "cppAvgMs": 0.1843,
+      "jsAvgMs": 1.5806,
+      "speedup": 8.6
+    }
+  ],
+  "averageSpeedup": 5.8
+}
