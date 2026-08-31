@@ -159,6 +159,12 @@ class PiperProvider {
         }
       })
 
+      // 捕获 stdin 写入错误（如 EPIPE），避免未捕获异常导致崩溃
+      this.process.stdin.on('error', (err) => {
+        console.warn('[TTS] stdin error:', err.message)
+        // 不重置状态，让 exit 事件处理进程重启
+      })
+
       this.process.on('error', (err) => {
         console.error('[TTS] process error:', err)
         this._resetState()
@@ -223,7 +229,24 @@ class PiperProvider {
     const id = randomUUID()
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject })
-      this.process.stdin.write(JSON.stringify({ id, text: cleanText, rate }) + '\n')
+
+      // 写入前检查进程和 stdin 状态
+      if (!this.process || !this.process.stdin || !this.process.stdin.writable) {
+        this.pending.delete(id)
+        reject(new Error('TTS process stdin is not writable (process may have exited)'))
+        return
+      }
+
+      const payload = JSON.stringify({ id, text: cleanText, rate }) + '\n'
+
+      // 使用回调处理写入错误，避免 EPIPE 未捕获异常
+      this.process.stdin.write(payload, (err) => {
+        if (err) {
+          console.warn('[TTS] stdin write error:', err.message)
+          this.pending.delete(id)
+          reject(new Error(`TTS stdin write failed: ${err.message}`))
+        }
+      })
     }).then(async (msg) => {
       const sampleRate = msg.sample_rate || 22050
 

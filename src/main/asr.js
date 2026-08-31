@@ -202,6 +202,12 @@ class AsrService {
         }
       })
 
+      // 捕获 stdin 写入错误（如 EPIPE），避免未捕获异常导致崩溃
+      this.process.stdin.on('error', (err) => {
+        console.warn('[ASR] stdin error:', err.message)
+        // 不重置状态，让 exit 事件处理进程重启
+      })
+
       this.process.on('error', (err) => {
         console.error('[ASR] process error:', err)
         this._resetState()
@@ -274,12 +280,29 @@ class AsrService {
 
           return new Promise((resolve, reject) => {
             this.pending.set(id, { resolve, reject })
-            this.process.stdin.write(JSON.stringify({
+
+            // 写入前检查进程和 stdin 状态
+            if (!this.process || !this.process.stdin || !this.process.stdin.writable) {
+              this.pending.delete(id)
+              reject(new Error('ASR process stdin is not writable (process may have exited)'))
+              return
+            }
+
+            const payload = JSON.stringify({
               id,
               pcm_b64: pcmB64,
               language,
               sample_rate: sampleRate,
-            }) + '\n')
+            }) + '\n'
+
+            // 使用回调处理写入错误，避免 EPIPE 未捕获异常
+            this.process.stdin.write(payload, (err) => {
+              if (err) {
+                console.warn('[ASR] stdin write error:', err.message)
+                this.pending.delete(id)
+                reject(new Error(`ASR stdin write failed: ${err.message}`))
+              }
+            })
           })
         },
         {
