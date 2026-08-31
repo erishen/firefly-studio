@@ -1,7 +1,11 @@
+Using Python 3.11.14 environment at: .venv-tts
 annotated-doc==0.0.5
 anyio==4.14.2
+av==18.1.0
 certifi==2026.7.22
 click==8.5.0
+ctranslate2==4.8.1
+faster-whisper==1.2.1
 filelock==3.32.4
 flatbuffers==25.12.19
 fsspec==2026.7.0
@@ -26,6 +30,7 @@ regex==2026.7.19
 rich==15.0.0
 safetensors==0.8.0
 sentence-stream==1.3.0
+setuptools==84.0.0
 shellingham==1.5.4
 tokenizers==0.23.1
 tqdm==4.70.0
