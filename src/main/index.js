@@ -9,7 +9,7 @@ import { join, dirname, isAbsolute } from 'path'
 import { fileURLToPath } from 'url'
 import { createRequire } from 'module'
 import { startServer } from '../../server/index.js'
-import { synthesize, isAvailable, preload, clearCache, getCacheStats, getTtsGuardStatus, restartTts, getTtsGuard, shutdownTts } from './tts.js'
+import { synthesize, isAvailable, isEdgeTtsAvailable, preload, clearCache, getCacheStats, getTtsGuardStatus, restartTts, getTtsGuard, shutdownTts } from './tts.js'
 import { transcribe, startAsr, getAsrGuardStatus, restartAsr, getAsrGuard, stopAsr } from './asr.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -365,6 +365,11 @@ function registerIpc() {
   })
   ipcMain.handle('tts:cacheStats', () => {
     return getCacheStats()
+  })
+
+  // 检查 edge-tts 是否可用（ENABLE_EDGE_TTS=true 且 tts-edge-tts.js 文件存在）
+  ipcMain.handle('tts:edgeTtsAvailable', () => {
+    return isEdgeTtsAvailable()
   })
 
   // ============================================================

@@ -57,6 +57,7 @@ const api = {
       ipcRenderer.invoke('tts:synthesize', text, options),
     clearCache: () => ipcRenderer.invoke('tts:clearCache'),
     cacheStats: () => ipcRenderer.invoke('tts:cacheStats'),
+    edgeTtsAvailable: () => ipcRenderer.invoke('tts:edgeTtsAvailable'),
   },
 
   // CoreAudio 低延迟播放器

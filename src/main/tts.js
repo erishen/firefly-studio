@@ -491,6 +491,27 @@ export function isAvailable() {
   return true
 }
 
+/**
+ * 检查 edge-tts 是否可用
+ * 需要同时满足：
+ * 1. .env 中 ENABLE_EDGE_TTS=true
+ * 2. tts-edge-tts.js 文件存在（该文件不提交到 GitHub，用户需自行准备）
+ */
+export function isEdgeTtsAvailable() {
+  if (!ENABLE_EDGE_TTS) {
+    return { available: false, reason: 'ENABLE_EDGE_TTS 未启用（.env 中设置 ENABLE_EDGE_TTS=true）' }
+  }
+  try {
+    const edgeTtsPath = join(process.cwd(), 'src/main/tts-edge-tts.js')
+    if (!existsSync(edgeTtsPath)) {
+      return { available: false, reason: 'tts-edge-tts.js 文件不存在（该文件不提交到 GitHub，需自行准备）' }
+    }
+    return { available: true, reason: '' }
+  } catch (e) {
+    return { available: false, reason: `检查失败: ${e.message}` }
+  }
+}
+
 export async function preload() {
   try {
     const p = await getProvider()

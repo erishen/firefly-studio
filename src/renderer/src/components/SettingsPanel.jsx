@@ -21,11 +21,29 @@ export function SettingsPanel({ onClose, onConfigChange, theme = 'dark', onTheme
   const [inputDevices, setInputDevices] = useState([])
   const [outputDevices, setOutputDevices] = useState([])
   const [devicesLoading, setDevicesLoading] = useState(true)
+  const [edgeTtsAvailable, setEdgeTtsAvailable] = useState({ available: false, reason: '' })
 
   useEffect(() => {
     loadConfig()
     loadDevices()
+    checkEdgeTtsAvailability()
   }, [])
+
+  const checkEdgeTtsAvailability = async () => {
+    try {
+      const result = await window.electronAPI?.tts?.edgeTtsAvailable?.()
+      if (result) {
+        setEdgeTtsAvailable(result)
+        // 如果当前配置是 edge-tts 但不可用，自动回退到 piper
+        if (!result.available && config?.ttsProvider === 'edge-tts') {
+          console.warn('[Settings] edge-tts 不可用，自动回退到 piper:', result.reason)
+          await updateConfig({ ttsProvider: 'piper' })
+        }
+      }
+    } catch (e) {
+      console.warn('[Settings] 检查 edge-tts 可用性失败:', e)
+    }
+  }
 
   const loadConfig = async () => {
     try {
@@ -131,9 +149,15 @@ export function SettingsPanel({ onClose, onConfigChange, theme = 'dark', onTheme
             onChange={(e) => updateConfig({ ttsProvider: e.target.value })}
           >
             <option value="piper">Piper（本地离线，免费）</option>
-            <option value="edge-tts">edge-tts（在线，音质更好）</option>
+            {edgeTtsAvailable.available && (
+              <option value="edge-tts">edge-tts（在线，音质更好）</option>
+            )}
           </select>
-          <div className="settings-hint">Piper 本地运行，edge-tts 需要网络</div>
+          <div className="settings-hint">
+            {edgeTtsAvailable.available
+              ? 'Piper 本地运行，edge-tts 需要网络'
+              : `edge-tts 未启用：${edgeTtsAvailable.reason || '请在 .env 中设置 ENABLE_EDGE_TTS=true'}`}
+          </div>
         </div>
 
         {/* TTS 声音选择（仅 edge-tts 有效） */}
