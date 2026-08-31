@@ -154,6 +154,12 @@ export function isRetryableTtsError(error) {
     'server error',
     'connection',
     'socket',
+    'service reset',      // 服务重置（进程异常退出后重启）
+    'reset',               // 重置
+    'not writable',        // stdin 不可写
+    'stdin write failed',  // stdin 写入失败
+    'epipe',               // 管道破裂
+    'piper',               // Piper 服务相关错误
   ]
 
   const errorMessage = (error?.message || '').toLowerCase()
@@ -178,6 +184,11 @@ export function isRetryableAsrError(error) {
     'server error',
     'audio',
     'decode',
+    'service reset',      // 服务重置（进程异常退出后重启）
+    'reset',               // 重置
+    'not writable',        // stdin 不可写
+    'stdin write failed',  // stdin 写入失败
+    'epipe',               // 管道破裂
   ]
 
   const errorMessage = (error?.message || '').toLowerCase()
