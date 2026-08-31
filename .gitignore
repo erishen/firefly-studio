@@ -65,14 +65,3 @@ native/rnnoise/src/rnnoise_data_little.c
 src/renderer/public/audio/*.mp3
 src/renderer/public/audio/*.wav
 src/renderer/public/audio/*.ogg
-
-# RVC 数字人翻唱相关（大文件 + 第三方代码 + 虚拟环境，不提交）
-native/rvc/models/
-native/rvc/rvc_official/
-native/rvc/official-rvc/
-native/rvc/.venv/
-native/rvc/test_*.wav
-native/rvc/*.wav
-native/rvc/__pycache__/
-native/rvc/**/__pycache__/
-native/rvc/**/*.pyc
