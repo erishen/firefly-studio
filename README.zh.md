@@ -356,3 +356,6 @@ curl -L -o native/piper/models/en_US-amy-medium.onnx.json \
 ---
 
 **[English](./README.md) | 中文**
+
+## 相关文章
+- [firefly-studio 架构复盘：一个桌面数字人应用为何从第一天起就是 Electron + C++](https://erishen.cn/firefly_studio/)

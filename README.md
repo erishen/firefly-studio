@@ -357,3 +357,6 @@ If the model license requires "complete credits must be attached", please ensure
 ---
 
 **English | [中文](./README.zh.md)**
+
+## Related Articles
+- [firefly-studio Architecture Retrospective: Why a Desktop Digital Human Was Electron + C++ From Day One](https://erishen.cn/firefly_studio-en/)
