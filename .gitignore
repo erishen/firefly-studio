@@ -65,3 +65,6 @@ native/rnnoise/src/rnnoise_data_little.c
 src/renderer/public/audio/*.mp3
 src/renderer/public/audio/*.wav
 src/renderer/public/audio/*.ogg
+
+# npm config (may contain registry auth tokens; keep local only)
+.npmrc
