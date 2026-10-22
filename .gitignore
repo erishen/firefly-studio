@@ -68,3 +68,11 @@ src/renderer/public/audio/*.ogg
 
 # npm config (may contain registry auth tokens; keep local only)
 .npmrc
+
+# Local editor / agent tooling config — keep local-only, never commit
+.vscode/
+.claude/
+.trae/
+.agents/
+.codex/
+.cursor/
